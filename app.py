@@ -14,7 +14,7 @@ def auth_login():
     SCOPES = "playlist-read-private user-library-read"
 
     if not CLIENT_ID or not REDIRECT_URI:
-        return jsonify({"error": "Missing CLIENT_ID or REDIRECT_URI in environment variables!."}), 500
+        return jsonify({"error": "Missing CLIENT_ID or REDIRECT_URI in environment variables!"}), 500
 
     login_url = (
         f"https://accounts.spotify.com/authorize"
@@ -25,11 +25,11 @@ def auth_login():
     )
     return jsonify({"url": login_url})
 
-@app.route("/auth/callback", methods=["GET"])
-def auth_callback():
+@app.route("/callback", methods=["GET"])
+def callback():
     code = request.args.get("code")
     if not code:
-        return jsonify({"error": "Authorization code missing!"}), 400
+        return jsonify({"error": "Authorization code is missing!"}), 400
 
     CLIENT_ID = os.getenv("CLIENT_ID")
     CLIENT_SECRET = os.getenv("CLIENT_SECRET")
@@ -49,7 +49,8 @@ def auth_callback():
     if response.status_code != 200:
         return jsonify({"error": "Failed to exchange token!"}), 400
 
-    return jsonify(response.json())
+    token_data = response.json()
+    return jsonify(token_data)
 
 @app.route("/playlists", methods=["GET"])
 def get_playlists():
