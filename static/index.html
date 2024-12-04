@@ -65,9 +65,7 @@
             audioPlayer.src = currentTrack.downloadLink;
             messageDiv.textContent = `Now Playing: ${currentTrack.title} by ${currentTrack.artist}`;
 
-            audioPlayer.play()
-                .catch(error => console.error("Error playing track:", error));
-
+            audioPlayer.play().catch(error => console.error("Error playing track:", error));
             audioPlayer.onended = playTrackQueue;
         }
 
@@ -100,8 +98,13 @@
                     return;
                 }
 
-                const { auth_url } = await response.json();
-                window.location.href = auth_url; // Redirect to Spotify login
+                const { url } = await response.json();
+                if (!url) {
+                    messageDiv.textContent = "Authentication URL not received from the server.";
+                    return;
+                }
+
+                window.location.href = url; // Redirect to Spotify login
             } catch (error) {
                 console.error("Error initiating authentication:", error);
                 messageDiv.textContent = "An error occurred during authentication.";
@@ -113,13 +116,19 @@
             startButton.style.display = "none"; // Hide the start button
             messageDiv.textContent = "Starting the music experience...";
 
-            const urlParams = new URLSearchParams(window.location.search);
+            const urlParams = new URLSearchParams(window.location.hash.replace("#", "?")); // Extract from hash
             const accessToken = urlParams.get("access_token");
 
             if (accessToken) {
-                // Exchange token with backend and fetch playlist
                 try {
-                    const response = await fetch(`${API_BASE_URL}/auth/callback?access_token=${accessToken}`);
+                    const response = await fetch(`${API_BASE_URL}/auth/callback`, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({ access_token: accessToken }),
+                    });
+
                     if (!response.ok) {
                         messageDiv.textContent = "Authentication failed.";
                         console.error("Error during token exchange:", await response.text());
