@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music DJ</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #111;
+            color: #fff;
+            margin: 0;
+            padding: 0;
+        }
+        h1 {
+            margin: 20px 0;
+            color: #1db954;
+        }
+        #message {
+            margin-top: 20px;
+            font-size: 18px;
+        }
+        audio {
+            margin: 20px 0;
+        }
+        #start-btn {
+            margin: 20px;
+            padding: 10px 20px;
+            font-size: 16px;
+            color: #fff;
+            background-color: #1db954;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #start-btn:hover {
+            background-color: #17a749;
+        }
+    </style>
+</head>
+<body>
+    <h1>Music DJ</h1>
+    <div id="message">Click the button to start playing music!</div>
+    <button id="start-btn">Start</button>
+    <audio id="audio-player" controls></audio>
+
+    <script>
+        const API_BASE_URL = "https://musicdj-1.onrender.com"; // Replace with your Render backend URL
+
+        const messageDiv = document.getElementById("message");
+        const audioPlayer = document.getElementById("audio-player");
+        const startButton = document.getElementById("start-btn");
+
+        let trackQueue = [];
+
+        // Play track queue
+        async function playTrackQueue() {
+            if (trackQueue.length === 0) {
+                messageDiv.textContent = "No tracks to play!";
+                return;
+            }
+
+            const currentTrack = trackQueue.shift();
+            audioPlayer.src = currentTrack.downloadLink;
+            messageDiv.textContent = `Now Playing: ${currentTrack.title} by ${currentTrack.artist}`;
+
+            audioPlayer.play()
+                .catch(error => console.error("Error playing track:", error));
+
+            audioPlayer.onended = playTrackQueue;
+        }
+
+        // Fetch playlist and populate track queue
+        async function fetchPlaylistAndPlay() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/playlists/daily-mix`);
+                if (!response.ok) {
+                    messageDiv.textContent = "Failed to fetch playlist.";
+                    console.error("Error fetching playlist:", await response.text());
+                    return;
+                }
+
+                const playlist = await response.json();
+                trackQueue = playlist.tracks;
+                playTrackQueue();
+            } catch (error) {
+                console.error("Error fetching playlist:", error);
+                messageDiv.textContent = "An error occurred while fetching the playlist.";
+            }
+        }
+
+        // Start the authentication process
+        async function startAuthentication() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/login`);
+                if (!response.ok) {
+                    messageDiv.textContent = "Failed to initiate authentication.";
+                    console.error("Error initiating authentication:", await response.text());
+                    return;
+                }
+
+                const { auth_url } = await response.json();
+                window.location.href = auth_url; // Redirect to Spotify login
+            } catch (error) {
+                console.error("Error initiating authentication:", error);
+                messageDiv.textContent = "An error occurred during authentication.";
+            }
+        }
+
+        // Handle user interaction
+        startButton.addEventListener("click", async () => {
+            startButton.style.display = "none"; // Hide the start button
+            messageDiv.textContent = "Starting the music experience...";
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const accessToken = urlParams.get("access_token");
+
+            if (accessToken) {
+                // Exchange token with backend and fetch playlist
+                try {
+                    const response = await fetch(`${API_BASE_URL}/auth/callback?access_token=${accessToken}`);
+                    if (!response.ok) {
+                        messageDiv.textContent = "Authentication failed.";
+                        console.error("Error during token exchange:", await response.text());
+                        return;
+                    }
+
+                    // Start playing the playlist
+                    fetchPlaylistAndPlay();
+                } catch (error) {
+                    console.error("Error during token exchange:", error);
+                    messageDiv.textContent = "An error occurred during token exchange.";
+                }
+            } else {
+                // Start authentication process
+                startAuthentication();
+            }
+        });
+    </script>
+</body>
+</html>
