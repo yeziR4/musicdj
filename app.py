@@ -5,6 +5,27 @@ app = Flask(__name__)
 
 # RapidAPI details
 RAPIDAPI_DOWNLOAD_URL = "https://spotify-downloader9.p.rapidapi.com/downloadSong"
+import os
+
+@app.route("/auth/login", methods=["GET"])
+def auth_login():
+    CLIENT_ID = os.getenv("CLIENT_ID")  # Fetch CLIENT_ID from environment variables
+    REDIRECT_URI = os.getenv("REDIRECT_URI")  # Fetch REDIRECT_URI from environment variables
+    SCOPES = "playlist-read-private user-library-read"  # Define necessary scopes
+
+    if not CLIENT_ID or not REDIRECT_URI:
+        return jsonify({"error": "Missing CLIENT_ID or REDIRECT_URI in environment variables!"}), 500
+
+    # Build Spotify login URL
+    login_url = (
+        f"https://accounts.spotify.com/authorize"
+        f"?client_id={CLIENT_ID}"
+        f"&response_type=token"
+        f"&redirect_uri={REDIRECT_URI}"
+        f"&scope={SCOPES}"
+    )
+    return jsonify({"url": login_url})
+
 
 
 # Route to serve the frontend
