@@ -67,17 +67,21 @@
         localStorage.setItem('spotify_token_expiry', Date.now() + tokens.expires_in * 1000);
     }
 
-    function getStoredToken() {
-        const accessToken = localStorage.getItem('spotify_access_token');
-        const expiryTime = parseInt(localStorage.getItem('spotify_token_expiry') || '0');
-        
-        // Check if token is expired
-        if (accessToken && Date.now() < expiryTime) {
-            return accessToken;
-        }
-        
-        return null;
+  function getStoredToken() {
+    const accessToken = localStorage.getItem('spotify_access_token');
+    const expiryTime = parseInt(localStorage.getItem('spotify_token_expiry') || '0');
+    
+    console.log("Stored Access Token:", accessToken); 
+    console.log("Token Expiry:", new Date(expiryTime)); 
+    
+    // Check if token is expired
+    if (accessToken && Date.now() < expiryTime) {
+        return accessToken;
     }
+    
+    console.log("Token is expired or not available"); 
+    return null;
+}
 
     // Parse access token from the URL
     function getAccessTokenFromUrl() {
@@ -126,42 +130,40 @@
     }
 
     // Fetch playlist and populate track queue (mostly unchanged)
-    async function fetchPlaylistAndPlay() {
-        try {
-            if (!accessToken) {
-                displayMessage("Access token not available. Please authenticate again.");
-                return;
-            }
+   async function fetchPlaylistAndPlay() {
+    try {
+        console.log("Access Token:", accessToken); // Add this line to log the token
 
-            displayMessage("Fetching playlist...");
-
-          const response = await fetch(`${API_BASE_URL}/playlists/daily-mix`, {
-             headers: {
-                 "Authorization": accessToken, 
-    },
-});
-
-            if (!response.ok) {
-                displayMessage("Failed to fetch playlist.");
-                console.error("Error fetching playlist:", await response.text());
-                return;
-            }
-
-            const { playlist_name, tracks } = await response.json();
-            if (tracks.length === 0) {
-                displayMessage("Playlist is empty.");
-                return;
-            }
-
-            trackQueue = tracks;
-            displayMessage(`Playing from playlist: ${playlist_name}`);
-            playTrackQueue();
-        } catch (error) {
-            console.error("Error fetching playlist:", error);
-            displayMessage("An error occurred while fetching the playlist.");
+        if (!accessToken) {
+            displayMessage("Access token not available. Please authenticate again.");
+            return;
         }
-    }
 
+        displayMessage("Fetching playlist...");
+
+        const response = await fetch(`${API_BASE_URL}/playlists/daily-mix`, {
+            headers: {
+                "Authorization": accessToken, // Ensure this is correct
+            },
+        });
+
+        console.log("Response status:", response.status); // Add this to log response status
+        const responseBody = await response.text(); // Log the full response body
+        console.log("Response body:", responseBody);
+
+        if (!response.ok) {
+            displayMessage(`Failed to fetch playlist. Status: ${response.status}`);
+            return;
+        }
+
+        const data = JSON.parse(responseBody);
+        const { playlist_name, tracks } = data;
+        // ... rest of the code remains the same
+    } catch (error) {
+        console.error("Full error details:", error);
+        displayMessage(`An error occurred: ${error.message}`);
+    }
+}
     // Start the authentication process
     async function startAuthentication() {
         try {
