@@ -1,6 +1,8 @@
 from flask import Flask, jsonify, request, send_from_directory
 import requests
 import os
+from flask import redirect, url_for
+
 
 app = Flask(__name__)
 
@@ -25,6 +27,7 @@ def auth_login():
     )
     return jsonify({"url": login_url})
 
+
 @app.route("/callback", methods=["GET"])
 def callback():
     code = request.args.get("code")
@@ -35,6 +38,7 @@ def callback():
     CLIENT_SECRET = os.getenv("CLIENT_SECRET")
     REDIRECT_URI = os.getenv("REDIRECT_URI")
 
+    # Exchange the authorization code for an access token
     response = requests.post(
         "https://accounts.spotify.com/api/token",
         data={
@@ -50,7 +54,18 @@ def callback():
         return jsonify({"error": "Failed to exchange token!"}), 400
 
     token_data = response.json()
-    return jsonify(token_data)
+
+    # Redirect to the index page or another frontend-rendered route with the token
+    return redirect(
+        url_for(
+            "index",  # This should match the function name of your frontend-rendered route
+            access_token=token_data["access_token"],
+            refresh_token=token_data["refresh_token"],
+            expires_in=token_data["expires_in"],
+        )
+    )
+
+
 
 @app.route("/playlists", methods=["GET"])
 def get_playlists():
