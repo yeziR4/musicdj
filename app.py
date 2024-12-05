@@ -2,6 +2,8 @@ from flask import Flask, jsonify, request, send_from_directory
 import requests
 import os
 from flask import redirect, url_for
+import logging
+import sys
 
 
 app = Flask(__name__)
@@ -29,6 +31,7 @@ def auth_login():
 
 
 @app.route("/callback", methods=["GET"])
+@app.route("/callback", methods=["GET"])
 def callback():
     code = request.args.get("code")
     if not code:
@@ -37,6 +40,15 @@ def callback():
     CLIENT_ID = os.getenv("CLIENT_ID")
     CLIENT_SECRET = os.getenv("CLIENT_SECRET")
     REDIRECT_URI = os.getenv("REDIRECT_URI")
+
+    # Print out environment variables for debugging
+    print(f"CLIENT_ID: {bool(CLIENT_ID)}")
+    print(f"CLIENT_SECRET: {bool(CLIENT_SECRET)}")
+    print(f"REDIRECT_URI: {REDIRECT_URI}")
+
+    # Rest of the code remains the same
+
+    
 
     # Exchange the authorization code for an access token
     response = requests.post(
@@ -67,27 +79,37 @@ def callback():
 
 
 
+
 @app.route("/playlists/daily-mix", methods=["GET"])
 def get_daily_mix_or_any_playlist():
+    # Add logging
+    print("Received headers:", request.headers)
     access_token = request.headers.get("Authorization")
-    
-    # Remove 'Bearer ' prefix if present
-    if access_token and access_token.startswith("Bearer "):
-        access_token = access_token.split(" ")[1]
-    
+    print(f"Extracted access token: {access_token}")
+
     if not access_token:
+        print("No access token found!")
         return jsonify({"error": "Access token is required!"}), 400
 
     try:
+        # More explicit token formatting
+        spotify_headers = {"Authorization": f"Bearer {access_token}"}
+        print("Spotify headers:", spotify_headers)
+
         # Fetch playlists from Spotify
         response = requests.get(
             "https://api.spotify.com/v1/me/playlists",
-            headers={"Authorization": f"Bearer {access_token}"},
+            headers=spotify_headers,
         )
         
-        if response.status_code != 200:
-            return jsonify({"error": f"Failed to fetch playlists. Spotify responded with {response.status_code}. Response: {response.text}"}), 400
+        print("Spotify response status:", response.status_code)
+        print("Spotify response body:", response.text)
 
+        if response.status_code != 200:
+            return jsonify({
+                "error": f"Failed to fetch playlists. Status: {response.status_code}",
+                "response": response.text
+            }), 400
         playlists = response.json()
         
         # Debugging: print playlists to understand the structure
@@ -128,10 +150,12 @@ def get_daily_mix_or_any_playlist():
         playlist_name = selected_playlist["name"]
         return jsonify({"playlist_name": playlist_name, "tracks": formatted_tracks})
 
-    except Exception as e:
-        # More detailed error logging
+     except Exception as e:
+        
+        print(f"Exception occurred: {str(e)}")
+        print("Traceback:", file=sys.stderr)
         import traceback
-        traceback.print_exc()
+        traceback.print_exc(file=sys.stderr)
         return jsonify({"error": f"An error occurred: {str(e)}"}), 500
 
 
