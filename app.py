@@ -70,6 +70,11 @@ def callback():
 @app.route("/playlists/daily-mix", methods=["GET"])
 def get_daily_mix_or_any_playlist():
     access_token = request.headers.get("Authorization")
+    
+    # Remove 'Bearer ' prefix if present
+    if access_token and access_token.startswith("Bearer "):
+        access_token = access_token.split(" ")[1]
+    
     if not access_token:
         return jsonify({"error": "Access token is required!"}), 400
 
@@ -77,12 +82,16 @@ def get_daily_mix_or_any_playlist():
         # Fetch playlists from Spotify
         response = requests.get(
             "https://api.spotify.com/v1/me/playlists",
-            headers={"Authorization": access_token},
+            headers={"Authorization": f"Bearer {access_token}"},
         )
+        
         if response.status_code != 200:
-            return jsonify({"error": "Failed to fetch playlists from Spotify!"}), 400
+            return jsonify({"error": f"Failed to fetch playlists. Spotify responded with {response.status_code}. Response: {response.text}"}), 400
 
         playlists = response.json()
+        
+        # Debugging: print playlists to understand the structure
+        print("Playlists:", playlists)
         
         # Look for "Daily Mix" playlist
         daily_mix = next(
@@ -97,21 +106,21 @@ def get_daily_mix_or_any_playlist():
 
         # Fetch tracks for the selected playlist
         playlist_id = selected_playlist["id"]
-        response = requests.get(
+        tracks_response = requests.get(
             f"https://api.spotify.com/v1/playlists/{playlist_id}/tracks",
-            headers={"Authorization": access_token},
+            headers={"Authorization": f"Bearer {access_token}"},
         )
-        if response.status_code != 200:
-            return jsonify({"error": "Failed to fetch tracks!"}), 400
+        if tracks_response.status_code != 200:
+            return jsonify({"error": f"Failed to fetch tracks. Spotify responded with {tracks_response.status_code}. Response: {tracks_response.text}"}), 400
 
-        tracks = response.json()
+        tracks = tracks_response.json()
 
         # Extract relevant track details
         formatted_tracks = [
             {
                 "title": track["track"]["name"],
                 "artist": ", ".join(artist["name"] for artist in track["track"]["artists"]),
-                "downloadLink": None,  # Add your logic to fetch download links if necessary
+                "downloadLink": None,
             }
             for track in tracks.get("items", [])
         ]
@@ -120,6 +129,9 @@ def get_daily_mix_or_any_playlist():
         return jsonify({"playlist_name": playlist_name, "tracks": formatted_tracks})
 
     except Exception as e:
+        # More detailed error logging
+        import traceback
+        traceback.print_exc()
         return jsonify({"error": f"An error occurred: {str(e)}"}), 500
 
 
