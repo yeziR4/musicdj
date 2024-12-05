@@ -135,11 +135,11 @@
 
             displayMessage("Fetching playlist...");
 
-            const response = await fetch(`${API_BASE_URL}/playlists/daily-mix`, {
-                headers: {
-                    "Authorization": `Bearer ${accessToken}`,
-                },
-            });
+          const response = await fetch(`${API_BASE_URL}/playlists/daily-mix`, {
+             headers: {
+                 "Authorization": accessToken, 
+    },
+});
 
             if (!response.ok) {
                 displayMessage("Failed to fetch playlist.");
