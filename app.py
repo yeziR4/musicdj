@@ -1,3 +1,4 @@
+
 from flask import Flask, jsonify, request, send_from_directory
 import requests
 import os
@@ -30,7 +31,7 @@ def auth_login():
     return jsonify({"url": login_url})
 
 
-@app.route("/callback", methods=["GET"])
+
 @app.route("/callback", methods=["GET"])
 def callback():
     code = request.args.get("code")
@@ -150,7 +151,7 @@ def get_daily_mix_or_any_playlist():
         playlist_name = selected_playlist["name"]
         return jsonify({"playlist_name": playlist_name, "tracks": formatted_tracks})
 
-     except Exception as e:
+    except Exception as e:
         
         print(f"Exception occurred: {str(e)}")
         print("Traceback:", file=sys.stderr)
