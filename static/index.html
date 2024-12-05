@@ -61,6 +61,16 @@
         messageDiv.textContent = message;
     }
 
+    // Parse access token from the URL
+    function getAccessTokenFromUrl() {
+        const hash = window.location.hash;
+        if (hash) {
+            const params = new URLSearchParams(hash.substring(1)); // Remove the '#' and parse
+            return params.get("access_token");
+        }
+        return null;
+    }
+
     // Play track queue
     async function playTrackQueue() {
         if (trackQueue.length === 0) {
@@ -105,7 +115,7 @@
             });
 
             if (!response.ok) {
-                displayMessage("Failed to fetch playlist..");
+                displayMessage("Failed to fetch playlist.");
                 console.error("Error fetching playlist:", await response.text());
                 return;
             }
@@ -154,8 +164,9 @@
         startButton.style.display = "none"; // Hide the start button
         displayMessage("Starting the music experience...");
 
-        const urlParams = new URLSearchParams(window.location.hash.replace("#", "?")); // Extract from hash
-        accessToken = urlParams.get("access_token");
+        if (!accessToken) {
+            accessToken = getAccessTokenFromUrl();
+        }
 
         if (accessToken) {
             try {
@@ -188,14 +199,14 @@
 
     // Automatically restart the experience if the token is still in the URL
     window.addEventListener("load", () => {
-        const urlParams = new URLSearchParams(window.location.hash.replace("#", "?"));
-        const existingAccessToken = urlParams.get("access_token");
-        if (existingAccessToken) {
-            accessToken = existingAccessToken;
+        accessToken = getAccessTokenFromUrl();
+        if (accessToken) {
+            displayMessage("Access token found in URL. Starting music experience...");
             fetchPlaylistAndPlay();
         }
     });
 </script>
+
 
 
 
