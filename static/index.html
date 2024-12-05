@@ -70,27 +70,30 @@
     }
 
     // Fetch playlist and populate track queue
-    async function fetchPlaylistAndPlay(accessToken) {
-        try {
-            const response = await fetch(`${API_BASE_URL}/playlists/daily-mix`, {
-                headers: {
-                    "Authorization": `Bearer ${accessToken}`,
-                },
-            });
-            if (!response.ok) {
-                messageDiv.textContent = "Failed to fetch playlist.";
-                console.error("Error fetching playlist:", await response.text());
-                return;
-            }
+   // Fetch playlist and populate track queue
+async function fetchPlaylistAndPlay() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/playlists/daily-mix`, {
+            headers: {
+                "Authorization": `Bearer ${accessToken}`,
+            },
+        });
 
-            const playlist = await response.json();
-            trackQueue = playlist.tracks;
-            playTrackQueue();
-        } catch (error) {
-            console.error("Error fetching playlist:", error);
-            messageDiv.textContent = "An error occurred while fetching the playlist.";
+        if (!response.ok) {
+            messageDiv.textContent = "Failed to fetch playlist.";
+            console.error("Error fetching playlist:", await response.text());
+            return;
         }
+
+        const { playlist_name, tracks } = await response.json();
+        trackQueue = tracks;
+        messageDiv.textContent = `Playing from playlist: ${playlist_name}`;
+        playTrackQueue();
+    } catch (error) {
+        console.error("Error fetching playlist:", error);
+        messageDiv.textContent = "An error occurred while fetching the playlist.";
     }
+}
 
     // Start the authentication process
     async function startAuthentication() {
