@@ -16,7 +16,7 @@ def auth_login():
     SCOPES = "playlist-read-private user-library-read"
 
     if not CLIENT_ID or not REDIRECT_URI:
-        return jsonify({"error": "Missing CLIENT_ID or REDIRECT_URI in environment variables!"}), 500
+        return jsonify({"error": "Missing CLIENT_ID or REDIRECT_URI in environment variables!!"}), 500
 
     login_url = (
         f"https://accounts.spotify.com/authorize"
