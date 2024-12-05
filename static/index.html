@@ -44,7 +44,6 @@
     <div id="message">Click the button to start playing music!</div>
     <button id="start-btn">Start</button>
     <audio id="audio-player" controls></audio>
-
 <script>
     const API_BASE_URL = "https://musicdj.onrender.com"; // Replace with your Render backend URL
 
@@ -61,17 +60,45 @@
         messageDiv.textContent = message;
     }
 
-    // Parse access token from the URL
-    function getAccessTokenFromUrl() {
-        const hash = window.location.hash;
-        if (hash) {
-            const params = new URLSearchParams(hash.substring(1)); // Remove the '#' and parse
-            return params.get("access_token");
+    // Store and retrieve tokens from localStorage
+    function storeTokens(tokens) {
+        localStorage.setItem('spotify_access_token', tokens.access_token);
+        localStorage.setItem('spotify_refresh_token', tokens.refresh_token);
+        localStorage.setItem('spotify_token_expiry', Date.now() + tokens.expires_in * 1000);
+    }
+
+    function getStoredToken() {
+        const accessToken = localStorage.getItem('spotify_access_token');
+        const expiryTime = parseInt(localStorage.getItem('spotify_token_expiry') || '0');
+        
+        // Check if token is expired
+        if (accessToken && Date.now() < expiryTime) {
+            return accessToken;
         }
+        
         return null;
     }
 
-    // Play track queue
+    // Parse access token from the URL
+    function getAccessTokenFromUrl() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const accessToken = urlParams.get("access_token");
+        const refreshToken = urlParams.get("refresh_token");
+        const expiresIn = urlParams.get("expires_in");
+
+        if (accessToken && refreshToken && expiresIn) {
+            storeTokens({ access_token: accessToken, refresh_token: refreshToken, expires_in: parseInt(expiresIn) });
+            
+            // Remove the query parameters from the URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+            
+            return accessToken;
+        }
+        
+        return null;
+    }
+
+    // Play track queue (unchanged from previous version)
     async function playTrackQueue() {
         if (trackQueue.length === 0) {
             displayMessage("No tracks to play!");
@@ -98,7 +125,7 @@
         }
     }
 
-    // Fetch playlist and populate track queue
+    // Fetch playlist and populate track queue (mostly unchanged)
     async function fetchPlaylistAndPlay() {
         try {
             if (!accessToken) {
@@ -164,45 +191,33 @@
         startButton.style.display = "none"; // Hide the start button
         displayMessage("Starting the music experience...");
 
-        if (!accessToken) {
-            accessToken = getAccessTokenFromUrl();
-        }
+        // First, check if we have a stored token
+        accessToken = getStoredToken();
 
         if (accessToken) {
-            try {
-                displayMessage("Exchanging access token...");
-                const response = await fetch(`${API_BASE_URL}/auth/callback`, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({ access_token: accessToken }),
-                });
+            // If stored token is valid, directly fetch and play playlist
+            fetchPlaylistAndPlay();
+            return;
+        }
 
-                if (!response.ok) {
-                    displayMessage("Authentication failed.");
-                    console.error("Error during token exchange:", await response.text());
-                    return;
-                }
+        // Check for new token from URL (after Spotify redirect)
+        accessToken = getAccessTokenFromUrl();
 
-                // Start playing the playlist
-                fetchPlaylistAndPlay();
-            } catch (error) {
-                console.error("Error during token exchange:", error);
-                displayMessage("An error occurred during token exchange.");
-            }
+        if (accessToken) {
+            // Start playing the playlist
+            fetchPlaylistAndPlay();
         } else {
             // Start authentication process
             startAuthentication();
         }
     });
 
-    // Automatically restart the experience if the token is still in the URL
+    // Automatically start the experience on page load if token is available
     window.addEventListener("load", () => {
-        accessToken = getAccessTokenFromUrl();
+        accessToken = getStoredToken() || getAccessTokenFromUrl();
         if (accessToken) {
-            displayMessage("Access token found in URL. Starting music experience...");
-            fetchPlaylistAndPlay();
+            displayMessage("Access token found. Starting music experience...");
+            startButton.click(); // Programmatically trigger the start process
         }
     });
 </script>
