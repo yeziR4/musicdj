@@ -93,7 +93,7 @@ def get_daily_mix_or_any_playlist():
         # If no "Daily Mix" found, use the first playlist
         selected_playlist = daily_mix or (playlists.get("items")[0] if playlists.get("items") else None)
         if not selected_playlist:
-            return jsonify({"error": "No playlists available!"}), 404
+            return jsonify({"error": "No playlists available!!"}), 404
 
         # Fetch tracks for the selected playlist
         playlist_id = selected_playlist["id"]
