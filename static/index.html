@@ -130,9 +130,9 @@
     }
 
     // Fetch playlist and populate track queue (mostly unchanged)
-   async function fetchPlaylistAndPlay() {
+  async function fetchPlaylistAndPlay() {
     try {
-        console.log("Access Token:", accessToken); // Add this line to log the token
+        console.log("Access Token:", accessToken); // Log the token for debugging
 
         if (!accessToken) {
             displayMessage("Access token not available. Please authenticate again.");
@@ -143,11 +143,11 @@
 
         const response = await fetch(`${API_BASE_URL}/playlists/daily-mix`, {
             headers: {
-                "Authorization": accessToken, // Ensure this is correct
+                "Authorization": `Bearer ${accessToken}`, // Add the 'Bearer ' prefix
             },
         });
 
-        console.log("Response status:", response.status); // Add this to log response status
+        console.log("Response status:", response.status); // Log response status
         const responseBody = await response.text(); // Log the full response body
         console.log("Response body:", responseBody);
 
@@ -158,12 +158,17 @@
 
         const data = JSON.parse(responseBody);
         const { playlist_name, tracks } = data;
-        // ... rest of the code remains the same
+        displayMessage(`Playlist "${playlist_name}" fetched. Preparing to play...`);
+
+        // Populate the track queue
+        trackQueue = tracks;
+        playTrackQueue(); // Start playback
     } catch (error) {
         console.error("Full error details:", error);
         displayMessage(`An error occurred: ${error.message}`);
     }
 }
+
     // Start the authentication process
     async function startAuthentication() {
         try {
