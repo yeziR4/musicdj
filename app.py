@@ -83,82 +83,78 @@ def callback():
 
 @app.route("/playlists/daily-mix", methods=["GET"])
 def get_daily_mix_or_any_playlist():
-    # Add logging
-    print("Received headers:", request.headers)
-    access_token = request.headers.get("Authorization")
-    print(f"Extracted access token: {access_token}")
-
-    if not access_token:
-        print("No access token found!")
-        return jsonify({"error": "Access token is required!"}), 400
-
     try:
-        # More explicit token formatting
-        spotify_headers = {"Authorization": f"Bearer {access_token}"}
-        print("Spotify headers:", spotify_headers)
+        # Retrieve the access token from the request headers
+        access_token = request.headers.get("Authorization")
+        if not access_token or not access_token.startswith("Bearer "):
+            return jsonify({"error": "Access token is required and must start with 'Bearer'!"}), 400
+        
+        # Extract the token from the header
+        access_token = access_token.split("Bearer ")[1]
 
-        # Fetch playlists from Spotify
-        response = requests.get(
+        # Define Spotify API headers
+        spotify_headers = {"Authorization": f"Bearer {access_token}"}
+
+        # Fetch the user's playlists
+        playlists_response = requests.get(
             "https://api.spotify.com/v1/me/playlists",
-            headers=spotify_headers,
+            headers=spotify_headers
         )
         
-        print("Spotify response status:", response.status_code)
-        print("Spotify response body:", response.text)
-
-        if response.status_code != 200:
+        if playlists_response.status_code != 200:
             return jsonify({
-                "error": f"Failed to fetch playlists. Status: {response.status_code}",
-                "response": response.text
-            }), 400
-        playlists = response.json()
+                "error": f"Failed to fetch playlists from Spotify. Status: {playlists_response.status_code}",
+                "response": playlists_response.text
+            }), 500
         
-        # Debugging: print playlists to understand the structure
-        print("Playlists:", playlists)
-        
+        playlists = playlists_response.json()
+
         # Look for "Daily Mix" playlist
         daily_mix = next(
             (playlist for playlist in playlists.get("items", []) if "Daily Mix" in playlist["name"]),
-            None,
+            None
         )
 
-        # If no "Daily Mix" found, use the first playlist
+        # If no "Daily Mix" is found, use the first available playlist
         selected_playlist = daily_mix or (playlists.get("items")[0] if playlists.get("items") else None)
         if not selected_playlist:
-            return jsonify({"error": "No playlists available!!"}), 404
+            return jsonify({"error": "No playlists are available!"}), 404
 
-        # Fetch tracks for the selected playlist
+        # Fetch the tracks from the selected playlist
         playlist_id = selected_playlist["id"]
         tracks_response = requests.get(
             f"https://api.spotify.com/v1/playlists/{playlist_id}/tracks",
-            headers={"Authorization": f"Bearer {access_token}"},
+            headers=spotify_headers
         )
+        
         if tracks_response.status_code != 200:
-            return jsonify({"error": f"Failed to fetch tracks. Spotify responded with {tracks_response.status_code}. Response: {tracks_response.text}"}), 400
-
+            return jsonify({
+                "error": f"Failed to fetch tracks from the playlist. Status: {tracks_response.status_code}",
+                "response": tracks_response.text
+            }), 500
+        
         tracks = tracks_response.json()
 
-        # Extract relevant track details
+        # Format the track details for the frontend
         formatted_tracks = [
             {
                 "title": track["track"]["name"],
                 "artist": ", ".join(artist["name"] for artist in track["track"]["artists"]),
-                "downloadLink": None,
+                "downloadLink": None  # Placeholder for download links, if needed
             }
-            for track in tracks.get("items", [])
+            for track in tracks.get("items", []) if track.get("track")
         ]
 
-        playlist_name = selected_playlist["name"]
-        return jsonify({"playlist_name": playlist_name, "tracks": formatted_tracks})
+        # Return the playlist name and tracks to the frontend
+        return jsonify({
+            "playlist_name": selected_playlist["name"],
+            "tracks": formatted_tracks
+        })
 
     except Exception as e:
-        
-        print(f"Exception occurred: {str(e)}")
-        print("Traceback:", file=sys.stderr)
-        import traceback
-        traceback.print_exc(file=sys.stderr)
-        return jsonify({"error": f"An error occurred: {str(e)}"}), 500
-
+        # Log the error details for debugging
+        app.logger.error(f"Error in /playlists/daily-mix: {str(e)}")
+        return jsonify({"error": "An internal server error occurred. Please check the server logs for more details."}), 500
 
 @app.route("/")
 def index():
