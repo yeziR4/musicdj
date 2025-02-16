@@ -2,3 +2,4 @@ flask
 requests
 gunicorn
 python-dotenv
+google-generativeai==0.3.2
