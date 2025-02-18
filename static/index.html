@@ -24,9 +24,22 @@
         audio {
             margin: 20px 0;
         }
-        #start-btn {
-            margin: 20px;
-            padding: 10px 20px;
+        #song-form {
+            margin: 20px auto;
+            max-width: 400px;
+        }
+        #song-form input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #444;
+            border-radius: 5px;
+            background-color: #222;
+            color: #fff;
+        }
+        #song-form button {
+            width: 100%;
+            padding: 10px;
             font-size: 16px;
             color: #fff;
             background-color: #1db954;
@@ -34,203 +47,80 @@
             border-radius: 5px;
             cursor: pointer;
         }
-        #start-btn:hover {
+        #song-form button:hover {
             background-color: #17a749;
         }
     </style>
 </head>
 <body>
     <h1>Music DJ</h1>
-    <div id="message">Click the button to start playing music!</div>
-    <button id="start-btn">Start</button>
+    <div id="message">Enter a song name and artist to play!</div>
+    <form id="song-form">
+        <input type="text" id="song-name" placeholder="Song Name" required>
+        <input type="text" id="artist-name" placeholder="Artist Name" required>
+        <button type="submit">Play Song</button>
+    </form>
     <audio id="audio-player" controls></audio>
-<script>
-    const API_BASE_URL = "https://musicdj.onrender.com"; // Replace with your Render backend URL
 
-    const messageDiv = document.getElementById("message");
-    const audioPlayer = document.getElementById("audio-player");
-    const startButton = document.getElementById("start-btn");
+    <script>
+        const API_BASE_URL = "https://musicdj.onrender.com"; // Replace with your Render backend URL
 
-    let trackQueue = [];
-    let accessToken = null;
+        const messageDiv = document.getElementById("message");
+        const audioPlayer = document.getElementById("audio-player");
+        const songForm = document.getElementById("song-form");
 
-    // Helper to log and display messages
-    function displayMessage(message) {
-        console.log(message);
-        messageDiv.textContent = message;
-    }
-
-    // Store and retrieve tokens from localStorage
-    function storeTokens(tokens) {
-        localStorage.setItem('spotify_access_token', tokens.access_token);
-        localStorage.setItem('spotify_refresh_token', tokens.refresh_token);
-        localStorage.setItem('spotify_token_expiry', Date.now() + tokens.expires_in * 1000);
-    }
-
-  function getStoredToken() {
-    const accessToken = localStorage.getItem('spotify_access_token');
-    const expiryTime = parseInt(localStorage.getItem('spotify_token_expiry') || '0');
-    
-    console.log("Stored Access Token:", accessToken); 
-    console.log("Token Expiry:", new Date(expiryTime)); 
-    
-    // Check if token is expired
-    if (accessToken && Date.now() < expiryTime) {
-        return accessToken;
-    }
-    
-    console.log("Token is expired or not available"); 
-    return null;
-}
-
-    // Parse access token from the URL
-    function getAccessTokenFromUrl() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const accessToken = urlParams.get("access_token");
-        const refreshToken = urlParams.get("refresh_token");
-        const expiresIn = urlParams.get("expires_in");
-
-        if (accessToken && refreshToken && expiresIn) {
-            storeTokens({ access_token: accessToken, refresh_token: refreshToken, expires_in: parseInt(expiresIn) });
-            
-            // Remove the query parameters from the URL
-            window.history.replaceState({}, document.title, window.location.pathname);
-            
-            return accessToken;
-        }
-        
-        return null;
-    }
-
-    // Play track queue (unchanged from previous version)
-    async function playTrackQueue() {
-        if (trackQueue.length === 0) {
-            displayMessage("No tracks to play!");
-            return;
+        // Helper to log and display messages
+        function displayMessage(message) {
+            console.log(message);
+            messageDiv.textContent = message;
         }
 
-        const currentTrack = trackQueue.shift();
-        if (currentTrack.downloadLink) {
-            audioPlayer.src = currentTrack.downloadLink;
-            displayMessage(`Now Playing: ${currentTrack.title} by ${currentTrack.artist}`);
+        // Handle song form submission
+        songForm.addEventListener("submit", async (event) => {
+            event.preventDefault(); // Prevent form submission
+
+            const songName = document.getElementById("song-name").value;
+            const artistName = document.getElementById("artist-name").value;
+
+            if (!songName || !artistName) {
+                displayMessage("Please enter both song name and artist name.");
+                return;
+            }
+
+            displayMessage("Fetching song...");
 
             try {
-                await audioPlayer.play();
+                // Send request to backend to download and play the song
+                const response = await fetch(`${API_BASE_URL}/request-song`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        input: `Play ${songName} by ${artistName}`,
+                    }),
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    displayMessage(`Error: ${errorData.error}`);
+                    return;
+                }
+
+                const data = await response.json();
+                const { song_id, adlib, download_link } = data;
+
+                displayMessage(`Now Playing: ${songName} by ${artistName}`);
+                audioPlayer.src = download_link;
+                audioPlayer.play();
+
+                // Display DJ adlib
+                console.log("DJ Adlib:", adlib);
             } catch (error) {
-                console.error("Error playing track:", error);
-                displayMessage("Error playing track. Skipping...");
-                playTrackQueue(); // Skip to the next track
+                console.error("Error:", error);
+                displayMessage("An error occurred. Please try again.");
             }
-
-            audioPlayer.onended = playTrackQueue;
-        } else {
-            displayMessage("No valid download link for this track. Skipping...");
-            playTrackQueue(); // Skip to the next track
-        }
-    }
-
-    // Fetch playlist and populate track queue (mostly unchanged)
-  async function fetchPlaylistAndPlay() {
-    try {
-        console.log("Access Token:", accessToken); // Log the token for debugging
-
-        if (!accessToken) {
-            displayMessage("Access token not available. Please authenticate again.");
-            return;
-        }
-
-        displayMessage("Fetching playlist...");
-
-        const response = await fetch(`${API_BASE_URL}/playlists/daily-mix`, {
-            headers: {
-                "Authorization": `Bearer ${accessToken}`, // Add the 'Bearer ' prefix
-            },
         });
-
-        console.log("Response status:", response.status); // Log response status
-        const responseBody = await response.text(); // Log the full response body
-        console.log("Response body:", responseBody);
-
-        if (!response.ok) {
-            displayMessage(`Failed to fetch playlist. Status: ${response.status}`);
-            return;
-        }
-
-        const data = JSON.parse(responseBody);
-        const { playlist_name, tracks } = data;
-        displayMessage(`Playlist "${playlist_name}" fetched. Preparing to play...`);
-
-        // Populate the track queue
-        trackQueue = tracks;
-        playTrackQueue(); // Start playback
-    } catch (error) {
-        console.error("Full error details:", error);
-        displayMessage(`An error occurred: ${error.message}`);
-    }
-}
-
-    // Start the authentication process
-    async function startAuthentication() {
-        try {
-            displayMessage("Redirecting to Spotify for authentication...");
-            const response = await fetch(`${API_BASE_URL}/auth/login`);
-            if (!response.ok) {
-                displayMessage("Failed to initiate authentication.");
-                console.error("Error initiating authentication:", await response.text());
-                return;
-            }
-
-            const { url } = await response.json();
-            if (!url) {
-                displayMessage("Authentication URL not received from the server.");
-                return;
-            }
-
-            window.location.href = url; // Redirect to Spotify login
-        } catch (error) {
-            console.error("Error initiating authentication:", error);
-            displayMessage("An error occurred during authentication.");
-        }
-    }
-
-    // Handle user interaction
-    startButton.addEventListener("click", async () => {
-        startButton.style.display = "none"; // Hide the start button
-        displayMessage("Starting the music experience...");
-
-        // First, check if we have a stored token
-        accessToken = getStoredToken();
-
-        if (accessToken) {
-            // If stored token is valid, directly fetch and play playlist
-            fetchPlaylistAndPlay();
-            return;
-        }
-
-        // Check for new token from URL (after Spotify redirect)
-        accessToken = getAccessTokenFromUrl();
-
-        if (accessToken) {
-            // Start playing the playlist
-            fetchPlaylistAndPlay();
-        } else {
-            // Start authentication process
-            startAuthentication();
-        }
-    });
-
-    // Automatically start the experience on page load if token is available
-    window.addEventListener("load", () => {
-        accessToken = getStoredToken() || getAccessTokenFromUrl();
-        if (accessToken) {
-            displayMessage("Access token found. Starting music experience...");
-            startButton.click(); // Programmatically trigger the start process
-        }
-    });
-</script>
-
-
-
-
+    </script>
 </body>
 </html>
