@@ -54,10 +54,9 @@
 </head>
 <body>
     <h1>Music DJ</h1>
-    <div id="message">Enter a song name and artist to play!</div>
+    <div id="message">Enter a song name or artist to play!</div>
     <form id="song-form">
-        <input type="text" id="song-name" placeholder="Song Name" required>
-        <input type="text" id="artist-name" placeholder="Artist Name" required>
+        <input type="text" id="song-query" placeholder="Enter song name or artist" required>
         <button type="submit">Play Song</button>
     </form>
     <audio id="audio-player" controls></audio>
@@ -79,11 +78,10 @@
         songForm.addEventListener("submit", async (event) => {
             event.preventDefault(); // Prevent form submission
 
-            const songName = document.getElementById("song-name").value;
-            const artistName = document.getElementById("artist-name").value;
+            const songQuery = document.getElementById("song-query").value;
 
-            if (!songName || !artistName) {
-                displayMessage("Please enter both song name and artist name.");
+            if (!songQuery) {
+                displayMessage("Please enter a song name or artist.");
                 return;
             }
 
@@ -97,7 +95,7 @@
                         "Content-Type": "application/json",
                     },
                     body: JSON.stringify({
-                        input: `Play ${songName} by ${artistName}`,
+                        input: songQuery, // Send the entire input
                     }),
                 });
 
@@ -110,7 +108,7 @@
                 const data = await response.json();
                 const { song_id, adlib, download_link } = data;
 
-                displayMessage(`Now Playing: ${songName} by ${artistName}`);
+                displayMessage(`Now Playing: ${songQuery}`);
                 audioPlayer.src = download_link;
                 audioPlayer.play();
 
