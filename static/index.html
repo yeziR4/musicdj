@@ -60,6 +60,10 @@
         <button type="submit">Play Song</button>
     </form>
     <audio id="audio-player" controls></audio>
+    <button id="test-gemini" type="button" style="margin-top: 10px; background-color: #444;">
+    Test Gemini Connection
+</button>
+
 
     <script>
         const API_BASE_URL = "https://musicdj.onrender.com"; // Replace with your Render backend URL
@@ -118,6 +122,15 @@
                 console.error("Error:", error);
                 displayMessage("An error occurred. Please try again.");
             }
+            document.getElementById("test-gemini").addEventListener("click", async () => {
+    try {
+        displayMessage("Testing Gemini connection...");
+        const response = await fetch(`${API_BASE_URL}/test-gemini`);
+        const data = await response.json();
+        displayMessage(data.success ? "Gemini connection successful!" : `Gemini test failed: ${data.error}`);
+    } catch (error) {
+        displayMessage("Failed to test Gemini connection");
+    }
         });
     </script>
 </body>
