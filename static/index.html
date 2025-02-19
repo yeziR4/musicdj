@@ -37,18 +37,30 @@
             background-color: #222;
             color: #fff;
         }
-        #song-form button {
+        button {
             width: 100%;
             padding: 10px;
             font-size: 16px;
             color: #fff;
-            background-color: #1db954;
             border: none;
             border-radius: 5px;
             cursor: pointer;
+            margin: 10px 0;
+        }
+        #song-form button {
+            background-color: #1db954;
         }
         #song-form button:hover {
             background-color: #17a749;
+        }
+        #test-gemini {
+            background-color: #444;
+            max-width: 400px;
+            margin: 10px auto;
+            display: block;
+        }
+        #test-gemini:hover {
+            background-color: #555;
         }
     </style>
 </head>
@@ -60,14 +72,10 @@
         <button type="submit">Play Song</button>
     </form>
     <audio id="audio-player" controls></audio>
-    <button id="test-gemini" type="button" style="margin-top: 10px; background-color: #444;">
-    Test Gemini Connection
-</button>
-
+    <button id="test-gemini" type="button">Test Gemini Connection</button>
 
     <script>
         const API_BASE_URL = "https://musicdj.onrender.com"; // Replace with your Render backend URL
-
         const messageDiv = document.getElementById("message");
         const audioPlayer = document.getElementById("audio-player");
         const songForm = document.getElementById("song-form");
@@ -122,15 +130,19 @@
                 console.error("Error:", error);
                 displayMessage("An error occurred. Please try again.");
             }
-            document.getElementById("test-gemini").addEventListener("click", async () => {
-    try {
-        displayMessage("Testing Gemini connection...");
-        const response = await fetch(`${API_BASE_URL}/test-gemini`);
-        const data = await response.json();
-        displayMessage(data.success ? "Gemini connection successful!" : `Gemini test failed: ${data.error}`);
-    } catch (error) {
-        displayMessage("Failed to test Gemini connection");
-    }
+        });
+
+        // Handle Gemini test button
+        document.getElementById("test-gemini").addEventListener("click", async () => {
+            try {
+                displayMessage("Testing Gemini connection...");
+                const response = await fetch(`${API_BASE_URL}/test-gemini`);
+                const data = await response.json();
+                displayMessage(data.success ? "Gemini connection successful!" : `Gemini test failed: ${data.error}`);
+            } catch (error) {
+                console.error("Test error:", error);
+                displayMessage("Failed to test Gemini connection");
+            }
         });
     </script>
 </body>
