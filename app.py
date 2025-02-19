@@ -171,31 +171,26 @@ def request_song():
         if not processed_input.get("song") or not processed_input.get("artist"):
             return jsonify({"error": "Could not extract song and artist information"}), 400
 
-        
+        # Step 2: Fetch song ID
+        song_id = get_song_id(processed_input["song"], processed_input["artist"])
+        if not song_id:
+            return jsonify({"error": "Song not found!"}), 404
 
-    # Step 1: Process user input
-    processed_input = process_user_input(user_input)
-    if "error" in processed_input:
-        return jsonify(processed_input), 400
+        # Step 3: Download the song
+        if download_song(song_id):
+            # Step 4: Generate DJ adlib
+            adlib = generate_dj_adlib(processed_input["song"], processed_input["artist"])
+            return jsonify({
+                "song_id": song_id,
+                "adlib": adlib,
+                "download_link": f"/play/{song_id}"
+            })
+        else:
+            return jsonify({"error": "Failed to download song!"}), 500
 
-    # Step 2: Fetch song ID
-    song_id = get_song_id(processed_input["song"], processed_input["artist"])
-    if not song_id:
-        return jsonify({"error": "Song not found!"}), 404
-
-    # Step 3: Download the song
-    if download_song(song_id):
-        # Step 4: Generate DJ adlib
-        adlib = generate_dj_adlib(processed_input["song"], processed_input["artist"])
-        return jsonify({
-            "song_id": song_id,
-            "adlib": adlib,
-            "download_link": f"/play/{song_id}"
-        })
-    else:
-        return jsonify({"error": "Failed to download song!"}), 500
-
-        
+    except Exception as e:
+        logging.error(f"Error in request_song: {str(e)}")
+        return jsonify({"error": "An unexpected error occurred"}), 500
 
 @app.route("/play/<song_id>", methods=["GET"])
 def play_song(song_id):
