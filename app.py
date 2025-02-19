@@ -34,44 +34,7 @@ RAPIDAPI_HEADERS = {
     'x-rapidapi-host': "spotify-downloader9.p.rapidapi.com"
 }
 
-# Helper Functions
 
-def process_user_input(user_input):
-    """Use Gemini to extract song/playlist details from user input."""
-    try:
-        response = model.generate_content(
-            f"""Extract the song name and artist from this request: '{user_input}'
-            Format the response exactly like this JSON:
-            {{"song": "song name here", "artist": "artist name here", "playlist": null}}
-            Only include the JSON, no other text."""
-        )
-        
-        # Get the text from the response
-        response_text = response.text
-        
-        # Clean the response text to ensure it's valid JSON
-        response_text = response_text.strip()
-        if response_text.startswith('```json'):
-            response_text = response_text[7:-3]  # Remove ```json and ``` if present
-        
-        # Parse the JSON
-        parsed_response = json.loads(response_text)
-        
-        # Ensure all required keys are present
-        required_keys = ['song', 'artist', 'playlist']
-        for key in required_keys:
-            if key not in parsed_response:
-                parsed_response[key] = None
-                
-        return parsed_response
-        
-    except json.JSONDecodeError as e:
-        logging.error(f"JSON parsing error: {e}")
-        logging.error(f"Response text: {response_text}")
-        return {"song": None, "artist": None, "playlist": None}
-    except Exception as e:
-        logging.error(f"Error processing user input: {e}")
-        return {"song": None, "artist": None, "playlist": None}
 
 def get_song_id(song_name, artist_name):
     """Fetch song ID from Spotify API."""
@@ -157,28 +120,101 @@ def callback():
         )
     )
 
+import logging
+from google.api_core import retry
+
+def process_user_input(user_input):
+    """Use Gemini to extract song/playlist details from user input."""
+    logging.info(f"Processing user input: {user_input}")
+    
+    try:
+        # Verify API key is set
+        if not GEMINI_API_KEY:
+            logging.error("GEMINI_API_KEY is not set")
+            return {"error": "API key configuration error"}
+
+        # Create the prompt
+        prompt = f"""Extract the song name and artist from this request: '{user_input}'
+        Return only a JSON object in this exact format:
+        {{"song": "song name here", "artist": "artist name here", "playlist": null}}"""
+        
+        logging.info("Sending request to Gemini API")
+        
+        # Add retry logic for the API call
+        @retry.Retry(predicate=retry.if_exception_type(Exception))
+        def generate_with_retry():
+            return model.generate_content(prompt)
+        
+        response = generate_with_retry()
+        logging.info(f"Received response from Gemini: {response.text}")
+        
+        # Clean the response text
+        response_text = response.text.strip()
+        if response_text.startswith('```json'):
+            response_text = response_text[7:]
+        if response_text.endswith('```'):
+            response_text = response_text[:-3]
+        
+        response_text = response_text.strip()
+        logging.info(f"Cleaned response text: {response_text}")
+        
+        # Parse JSON response
+        parsed_response = json.loads(response_text)
+        
+        # Validate the response format
+        required_keys = ['song', 'artist', 'playlist']
+        for key in required_keys:
+            if key not in parsed_response:
+                parsed_response[key] = None
+        
+        logging.info(f"Successfully parsed response: {parsed_response}")
+        return parsed_response
+        
+    except json.JSONDecodeError as e:
+        logging.error(f"JSON parsing error: {str(e)}")
+        logging.error(f"Response text that failed to parse: {response_text}")
+        return {"error": "Failed to parse Gemini response"}
+        
+    except Exception as e:
+        logging.error(f"Unexpected error in process_user_input: {str(e)}")
+        return {"error": f"Unexpected error: {str(e)}"}
+
 @app.route("/request-song", methods=["POST"])
 def request_song():
+    logging.info("Received request to /request-song endpoint")
+    
     try:
         user_input = request.json.get("input")
+        logging.info(f"Received user input: {user_input}")
+        
         if not user_input:
+            logging.error("No user input provided")
             return jsonify({"error": "User input is required!"}), 400
 
-        # Step 1: Process user input
+        # Process user input
         processed_input = process_user_input(user_input)
-        logging.debug(f"Processed input: {processed_input}")
-
+        logging.info(f"Processed input result: {processed_input}")
+        
+        if "error" in processed_input:
+            logging.error(f"Error in processed input: {processed_input['error']}")
+            return jsonify({"error": processed_input["error"]}), 500
+            
         if not processed_input.get("song") or not processed_input.get("artist"):
+            logging.error("Could not extract song and artist information")
             return jsonify({"error": "Could not extract song and artist information"}), 400
 
-        # Step 2: Fetch song ID
+        # Fetch song ID
         song_id = get_song_id(processed_input["song"], processed_input["artist"])
+        logging.info(f"Retrieved song ID: {song_id}")
+        
         if not song_id:
+            logging.error("Song not found")
             return jsonify({"error": "Song not found!"}), 404
 
-        # Step 3: Download the song
+        # Download song
         if download_song(song_id):
-            # Step 4: Generate DJ adlib
+            logging.info("Successfully downloaded song")
+            # Generate DJ adlib
             adlib = generate_dj_adlib(processed_input["song"], processed_input["artist"])
             return jsonify({
                 "song_id": song_id,
@@ -186,12 +222,12 @@ def request_song():
                 "download_link": f"/play/{song_id}"
             })
         else:
+            logging.error("Failed to download song")
             return jsonify({"error": "Failed to download song!"}), 500
 
     except Exception as e:
-        logging.error(f"Error in request_song: {str(e)}")
+        logging.error(f"Unexpected error in request_song: {str(e)}")
         return jsonify({"error": "An unexpected error occurred"}), 500
-
 @app.route("/play/<song_id>", methods=["GET"])
 def play_song(song_id):
     """Serve the downloaded song."""
