@@ -38,14 +38,40 @@ RAPIDAPI_HEADERS = {
 
 def process_user_input(user_input):
     """Use Gemini to extract song/playlist details from user input."""
-    response = model.generate_content(
-        f"Extract the song name, artist, or playlist from the following user request: {user_input}. "
-        "Return the response in JSON format with keys 'song', 'artist', and 'playlist'."
-    )
     try:
-        return json.loads(response.text)
-    except json.JSONDecodeError:
-        return {"error": "Failed to parse Gemini response."}
+        response = model.generate_content(
+            f"""Extract the song name and artist from this request: '{user_input}'
+            Format the response exactly like this JSON:
+            {{"song": "song name here", "artist": "artist name here", "playlist": null}}
+            Only include the JSON, no other text."""
+        )
+        
+        # Get the text from the response
+        response_text = response.text
+        
+        # Clean the response text to ensure it's valid JSON
+        response_text = response_text.strip()
+        if response_text.startswith('```json'):
+            response_text = response_text[7:-3]  # Remove ```json and ``` if present
+        
+        # Parse the JSON
+        parsed_response = json.loads(response_text)
+        
+        # Ensure all required keys are present
+        required_keys = ['song', 'artist', 'playlist']
+        for key in required_keys:
+            if key not in parsed_response:
+                parsed_response[key] = None
+                
+        return parsed_response
+        
+    except json.JSONDecodeError as e:
+        logging.error(f"JSON parsing error: {e}")
+        logging.error(f"Response text: {response_text}")
+        return {"song": None, "artist": None, "playlist": None}
+    except Exception as e:
+        logging.error(f"Error processing user input: {e}")
+        return {"song": None, "artist": None, "playlist": None}
 
 def get_song_id(song_name, artist_name):
     """Fetch song ID from Spotify API."""
@@ -133,9 +159,19 @@ def callback():
 
 @app.route("/request-song", methods=["POST"])
 def request_song():
-    user_input = request.json.get("input")
-    if not user_input:
-        return jsonify({"error": "User input is required!"}), 400
+    try:
+        user_input = request.json.get("input")
+        if not user_input:
+            return jsonify({"error": "User input is required!"}), 400
+
+        # Step 1: Process user input
+        processed_input = process_user_input(user_input)
+        logging.debug(f"Processed input: {processed_input}")
+
+        if not processed_input.get("song") or not processed_input.get("artist"):
+            return jsonify({"error": "Could not extract song and artist information"}), 400
+
+        
 
     # Step 1: Process user input
     processed_input = process_user_input(user_input)
