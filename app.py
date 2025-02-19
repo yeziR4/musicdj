@@ -133,7 +133,6 @@ def callback():
 
 @app.route("/request-song", methods=["POST"])
 def request_song():
-    """Handle user song requests."""
     user_input = request.json.get("input")
     if not user_input:
         return jsonify({"error": "User input is required!"}), 400
@@ -143,28 +142,24 @@ def request_song():
     if "error" in processed_input:
         return jsonify(processed_input), 400
 
-    # Step 2: Fetch song/playlist ID
-    if processed_input.get("playlist"):
-        playlist_id = get_playlist_id(processed_input["playlist"])
-        if not playlist_id:
-            return jsonify({"error": "Playlist not found!"}), 404
-        # Fetch and download all songs in the playlist
-        # (Implementation left as an exercise)
+    # Step 2: Fetch song ID
+    song_id = get_song_id(processed_input["song"], processed_input["artist"])
+    if not song_id:
+        return jsonify({"error": "Song not found!"}), 404
+
+    # Step 3: Download the song
+    if download_song(song_id):
+        # Step 4: Generate DJ adlib
+        adlib = generate_dj_adlib(processed_input["song"], processed_input["artist"])
+        return jsonify({
+            "song_id": song_id,
+            "adlib": adlib,
+            "download_link": f"/play/{song_id}"
+        })
     else:
-        song_id = get_song_id(processed_input["song"], processed_input["artist"])
-        if not song_id:
-            return jsonify({"error": "Song not found!"}), 404
-        # Step 3: Download the song
-        if download_song(song_id):
-            # Step 4: Generate DJ adlib
-            adlib = generate_dj_adlib(processed_input["song"], processed_input["artist"])
-            return jsonify({
-                "song_id": song_id,
-                "adlib": adlib,
-                "download_link": f"/play/{song_id}"
-            })
-        else:
-            return jsonify({"error": "Failed to download song!"}), 500
+        return jsonify({"error": "Failed to download song!"}), 500
+
+        
 
 @app.route("/play/<song_id>", methods=["GET"])
 def play_song(song_id):
