@@ -236,6 +236,18 @@ def play_song(song_id):
         return send_file(file_path, as_attachment=True)
     else:
         return jsonify({"error": "Song not found!"}), 404
+@app.route("/test-gemini", methods=["GET"])
+def test_gemini():
+    try:
+        logging.info("Testing Gemini API connection...")
+        logging.info(f"API Key present: {bool(GEMINI_API_KEY)}")
+        
+        response = model.generate_content("Just say 'test'")
+        logging.info(f"Raw Gemini response: {response}")
+        return jsonify({"success": True, "response": response.text})
+    except Exception as e:
+        logging.error(f"Gemini test failed: {str(e)}")
+        return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route("/")
 def index():
