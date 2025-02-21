@@ -228,6 +228,7 @@ def request_song():
     except Exception as e:
         logging.error(f"Unexpected error in request_song: {str(e)}")
         return jsonify({"error": "An unexpected error occurred"}), 500
+
 @app.route("/play/<song_id>", methods=["GET"])
 def play_song(song_id):
     """Serve the downloaded song."""
