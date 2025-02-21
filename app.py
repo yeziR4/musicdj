@@ -205,19 +205,7 @@ def process_user_input(user_input):
         return {"error": f"Unexpected error: {str(e)}"}
 
 @app.route("/request-song", methods=["POST"])
-@app.before_first_request
-def check_spotify_setup():
-    logging.info("=== Checking Spotify Setup ===")
-    try:
-        logging.info(f"SPOTIFY_CLIENT_ID set: {bool(SPOTIFY_CLIENT_ID)}")
-        logging.info(f"SPOTIFY_CLIENT_SECRET set: {bool(SPOTIFY_CLIENT_SECRET)}")
-        logging.info(f"SPOTIFY_REDIRECT_URI set: {bool(SPOTIFY_REDIRECT_URI)}")
-        
-        # Try to get a playlist to test the connection
-        playlists = sp.current_user_playlists(limit=1)
-        logging.info("Successfully connected to Spotify API")
-    except Exception as e:
-        logging.error(f"Failed to connect to Spotify: {str(e)}")
+
 def request_song():
     logging.info("Received request to /request-song endpoint")
     
