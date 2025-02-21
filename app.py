@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, send_file, redirect, url_for,send_from_directory
+from flask import Flask, jsonify, request, send_file, redirect, url_for, send_from_directory
 import requests
 import os
 import json
@@ -7,6 +7,13 @@ import google.generativeai as genai
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 import logging
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    force=True
+)
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -21,11 +28,27 @@ SPOTIFY_CLIENT_ID = os.getenv("CLIENT_ID")
 SPOTIFY_CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 SPOTIFY_REDIRECT_URI = os.getenv("REDIRECT_URI")
 
+# Log environment variables status
+logging.info("=== Checking Environment Variables ===")
+logging.info(f"GEMINI_API_KEY set: {bool(GEMINI_API_KEY)}")
+logging.info(f"SPOTIFY_CLIENT_ID set: {bool(SPOTIFY_CLIENT_ID)}")
+logging.info(f"SPOTIFY_CLIENT_SECRET set: {bool(SPOTIFY_CLIENT_SECRET)}")
+logging.info(f"SPOTIFY_REDIRECT_URI set: {bool(SPOTIFY_REDIRECT_URI)}")
+
 # Initialize Spotify client
-sp = spotipy.Spotify(auth_manager=SpotifyOAuth(client_id=SPOTIFY_CLIENT_ID,
-                                               client_secret=SPOTIFY_CLIENT_SECRET,
-                                               redirect_uri=SPOTIFY_REDIRECT_URI,
-                                               scope="user-library-read"))
+try:
+    sp = spotipy.Spotify(auth_manager=SpotifyOAuth(
+        client_id=SPOTIFY_CLIENT_ID,
+        client_secret=SPOTIFY_CLIENT_SECRET,
+        redirect_uri=SPOTIFY_REDIRECT_URI,
+        scope="user-library-read"
+    ))
+    # Test Spotify connection
+    playlists = sp.current_user_playlists(limit=1)
+    logging.info("Successfully connected to Spotify API")
+except Exception as e:
+    logging.error(f"Failed to initialize Spotify client: {str(e)}")
+    # Don't raise the exception, let the app continue running
 
 # RapidAPI details
 RAPIDAPI_DOWNLOAD_URL = "https://spotify-downloader9.p.rapidapi.com/downloadSong"
@@ -34,6 +57,7 @@ RAPIDAPI_HEADERS = {
     'x-rapidapi-host': "spotify-downloader9.p.rapidapi.com"
 }
 
+# Your existing route handlers and functions go here...
 
 
 def get_song_id(song_name, artist_name):
