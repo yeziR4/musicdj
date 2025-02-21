@@ -87,29 +87,51 @@
         }
 
         // Handle song form submission
-        songForm.addEventListener("submit", async (event) => {
-            event.preventDefault(); // Prevent form submission
+       // Handle song form submission
+songForm.addEventListener("submit", async (event) => {
+    event.preventDefault(); // Prevent form submission
 
-            const songQuery = document.getElementById("song-query").value;
+    const songQuery = document.getElementById("song-query").value;
 
-            if (!songQuery) {
-                displayMessage("Please enter a song name or artist.");
-                return;
-            }
+    if (!songQuery) {
+        displayMessage("Please enter a song name or artist.");
+        return;
+    }
 
-            displayMessage("Fetching song...");
+    displayMessage("Fetching song...");
 
-            try {
-                // Send request to backend to download and play the song
-                const response = await fetch(`${API_BASE_URL}/request-song`, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({
-                        input: songQuery, // Send the entire input
-                    }),
-                });
+    try {
+        // Send request to backend to download and play the song
+        const response = await fetch(`${API_BASE_URL}/request-song`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                input: songQuery, // Send the entire input
+            }),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            displayMessage(`Error: ${errorData.error}`);
+            return;
+        }
+
+        const data = await response.json();
+        const { song_id, adlib, download_link } = data;
+
+        displayMessage(`Now Playing: ${songQuery}`);
+        audioPlayer.src = download_link;
+        audioPlayer.play();
+
+        // Display DJ adlib
+        console.log("DJ Adlib:", adlib);
+    } catch (error) {
+        console.error("Error:", error);
+        displayMessage("An error occurred. Please try again.");
+    }
+});
 
                 if (!response.ok) {
                     const errorData = await response.json();
