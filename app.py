@@ -57,7 +57,17 @@ RAPIDAPI_HEADERS = {
     'x-rapidapi-host': "spotify-downloader9.p.rapidapi.com"
 }
 
-# Your existing route handlers and functions go here...
+from spotipy.oauth2 import SpotifyClientCredentials
+
+# Initialize Spotify client with client credentials flow instead of OAuth
+try:
+    sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
+        client_id=SPOTIFY_CLIENT_ID,
+        client_secret=SPOTIFY_CLIENT_SECRET
+    ))
+    logging.info("Successfully initialized Spotify client with client credentials")
+except Exception as e:
+    logging.error(f"Failed to initialize Spotify client: {str(e)}")
 
 
 def get_song_id(song_name, artist_name):
