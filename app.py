@@ -201,7 +201,10 @@ def process_user_input(user_input):
           result = {{"songs": [song_id1, song_id2]}}
           ```
         
-        IMPORTANT: Always assign the result to the variable `result`. Do not include any explanations or additional text.
+        IMPORTANT: 
+        - Do not include the `sort` parameter in the `sp.search()` method.
+        - Always assign the result to the variable `result`. 
+        - Do not include any explanations or additional text.
         """
         
         # Get Gemini's response
@@ -218,7 +221,10 @@ def process_user_input(user_input):
             return {"error": "No code block found in Gemini's response"}
         
         code = code_block.group(1).strip()
-        logging.info(f"Extracted code: {code}")
+        
+        # Remove the `sort` parameter if it exists
+        code = re.sub(r',\s*sort="[^"]*"', '', code)
+        logging.info(f"Extracted code (after removing sort): {code}")
         
         # Execute the code and capture the result
         local_vars = {"sp": sp, "result": None}
