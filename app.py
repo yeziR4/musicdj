@@ -268,7 +268,11 @@ def request_song():
                     logging.info(f"Successfully downloaded song: {song_id}")
                 else:
                     logging.error(f"Failed to download song: {song_id}")
-            return jsonify({"success": True, "songs": song_ids})
+            return jsonify({
+                "song_id": song_ids[0],  # Return the first song ID
+                "download_link": f"/play/{song_ids[0]}",  # Correct download link
+                "adlib": generate_dj_adlib(user_input, "Unknown Artist")  # Generate adlib
+            })
         
         elif processed_input.get("playlist"):
             playlist_id = processed_input["playlist"]
@@ -286,9 +290,11 @@ def request_song():
 def play_song(song_id):
     """Serve the downloaded song."""
     file_path = f"{song_id}.mp3"
+    logging.info(f"Serving file: {file_path}")
     if os.path.exists(file_path):
-        return send_file(file_path, as_attachment=True)
+        return send_file(file_path, mimetype="audio/mpeg")
     else:
+        logging.error(f"File not found: {file_path}")
         return jsonify({"error": "Song not found!"}), 404
 
 @app.route("/test-gemini", methods=["GET"])
