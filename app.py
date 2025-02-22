@@ -138,8 +138,21 @@ def callback():
         )
     )
 
+import re
+
+def fix_json(response_text):
+    """Attempt to fix malformed JSON."""
+    try:
+        # Remove any non-JSON characters (e.g., markdown code blocks)
+        response_text = re.sub(r'```json|```', '', response_text).strip()
+        # Parse the JSON to ensure it's valid
+        json.loads(response_text)
+        return response_text
+    except json.JSONDecodeError:
+        # If the JSON is still invalid, return None
+        return None
+
 def process_user_input(user_input):
-    """Use Gemini to interpret user request and generate Spotify API query."""
     logging.info(f"Processing user input: {user_input}")
     
     try:
@@ -171,22 +184,29 @@ def process_user_input(user_input):
         response = model.generate_content(prompt)
         response_text = response.text.strip()
         
-        # Clean the response text
-        if response_text.startswith('```json'):
-            response_text = response_text[7:]
-        if response_text.endswith('```'):
-            response_text = response_text[:-3]
-        response_text = response_text.strip()
+        # Log the raw response from Gemini
+        logging.info(f"Raw response from Gemini: {response_text}")
+        
+        # Attempt to fix the JSON
+        fixed_json = fix_json(response_text)
+        if not fixed_json:
+            logging.error("Failed to fix JSON response from Gemini")
+            return {"error": "Invalid JSON response from Gemini"}
         
         # Parse JSON response
-        parsed_response = json.loads(response_text)
+        parsed_response = json.loads(fixed_json)
         logging.info(f"Parsed response: {parsed_response}")
         
         return parsed_response
         
+    except json.JSONDecodeError as e:
+        logging.error(f"JSON parsing error: {str(e)}")
+        logging.error(f"Response text that failed to parse: {response_text}")
+        return {"error": "Failed to parse Gemini response"}
+        
     except Exception as e:
-        logging.error(f"Error in process_user_input: {str(e)}")
-        return {"error": str(e)}
+        logging.error(f"Unexpected error in process_user_input: {str(e)}")
+        return {"error": f"Unexpected error: {str(e)}"}
 
 @app.route("/request-song", methods=["POST"])
 def request_song():
@@ -230,7 +250,6 @@ def request_song():
     except Exception as e:
         logging.error(f"Unexpected error in request_song: {str(e)}")
         return jsonify({"error": "An unexpected error occurred"}), 500
-
 @app.route("/play/<song_id>", methods=["GET"])
 def play_song(song_id):
     """Serve the downloaded song."""
