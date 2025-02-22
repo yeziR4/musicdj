@@ -169,7 +169,7 @@ def process_user_input(user_input):
            # Python code to query Spotify API
            results = sp.search(q="query", type="track", limit=1)
            song_id = results["tracks"]["items"][0]["id"]
-           {{"songs": [song_id]}}
+           result = {{"songs": [song_id]}}
            ```
         
         Example 1:
@@ -178,7 +178,7 @@ def process_user_input(user_input):
           ```python
           results = sp.search(q="artist:Asake", type="track", limit=1)
           song_id = results["tracks"]["items"][0]["id"]
-          {{"songs": [song_id]}}
+          result = {{"songs": [song_id]}}
           ```
         
         Example 2:
@@ -187,7 +187,7 @@ def process_user_input(user_input):
           ```python
           playlists = sp.current_user_playlists(limit=1)
           playlist_id = playlists["items"][0]["id"]
-          {{"playlist": playlist_id}}
+          result = {{"playlist": playlist_id}}
           ```
         
         Example 3:
@@ -198,10 +198,10 @@ def process_user_input(user_input):
           results2 = sp.search(q="artist:Burna Boy", type="track", limit=1)
           song_id1 = results1["tracks"]["items"][0]["id"]
           song_id2 = results2["tracks"]["items"][0]["id"]
-          {{"songs": [song_id1, song_id2]}}
+          result = {{"songs": [song_id1, song_id2]}}
           ```
         
-        IMPORTANT: Only return the Python code. Do not include any explanations or additional text.
+        IMPORTANT: Always assign the result to the variable `result`. Do not include any explanations or additional text.
         """
         
         # Get Gemini's response
@@ -220,8 +220,8 @@ def process_user_input(user_input):
         code = code_block.group(1).strip()
         logging.info(f"Extracted code: {code}")
         
-        # Execute the code
-        local_vars = {"sp": sp}
+        # Execute the code and capture the result
+        local_vars = {"sp": sp, "result": None}
         exec(code, {}, local_vars)
         
         # Get the result from the executed code
