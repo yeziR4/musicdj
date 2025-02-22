@@ -70,22 +70,6 @@ except Exception as e:
     logging.error(f"Failed to initialize Spotify client: {str(e)}")
 
 
-def get_song_id(song_name, artist_name):
-    """Fetch song ID from Spotify API."""
-    query = f"track:{song_name} artist:{artist_name}"
-    results = sp.search(q=query, type="track", limit=1)
-    if results["tracks"]["items"]:
-        return results["tracks"]["items"][0]["id"]
-    return None
-
-def get_playlist_id(playlist_name):
-    """Fetch playlist ID from Spotify API."""
-    playlists = sp.current_user_playlists()
-    for playlist in playlists["items"]:
-        if playlist_name.lower() in playlist["name"].lower():
-            return playlist["id"]
-    return None
-
 def download_song(song_id):
     """Download song using RapidAPI Spotify Downloader."""
     conn = http.client.HTTPSConnection("spotify-downloader9.p.rapidapi.com")
@@ -154,68 +138,57 @@ def callback():
         )
     )
 
-import logging
-from google.api_core import retry
-
-
 def process_user_input(user_input):
-    """Use Gemini to extract song/playlist details from user input."""
+    """Use Gemini to interpret user request and generate Spotify API query."""
     logging.info(f"Processing user input: {user_input}")
     
     try:
-        # Verify API key is set
-        if not GEMINI_API_KEY:
-            logging.error("GEMINI_API_KEY is not set")
-            return {"error": "API key configuration error"}
-
         # Create the prompt
-        prompt = f"""Extract the song name and artist from this request: '{user_input}'
-        Return only a JSON object in this exact format:
-        {{"song": "song name here", "artist": "artist name here", "playlist": null}}"""
+        prompt = f"""
+        You are a music assistant integrated with the Spotify API. 
+        The user has made the following request: '{user_input}'
         
-        logging.info("Sending request to Gemini API")
+        Your task is to:
+        1. Understand the user's intent.
+        2. Generate the necessary Spotify API query or code to fulfill the request.
+        3. Return the song(s) or playlist details in the following format:
+           {{"songs": ["song_id_1", "song_id_2"], "playlist": "playlist_id"}}
         
-        # Add retry logic for the API call
-        @retry.Retry(predicate=retry.if_exception_type(Exception))
-        def generate_with_retry():
-            return model.generate_content(prompt)
+        Example 1:
+        - User input: "Play Davido's latest song."
+        - Output: {{"songs": ["6tE4IXA8W8d6Fj5Qz1Zz0J"]}}
         
-        response = generate_with_retry()
-        logging.info(f"Received response from Gemini: {response.text}")
+        Example 2:
+        - User input: "Play my new playlist."
+        - Output: {{"playlist": "37i9dQZF1DXcBWIGoYBM5M"}}
+        
+        Example 3:
+        - User input: "Play a mix of Davido and Wizkid."
+        - Output: {{"songs": ["6tE4IXA8W8d6Fj5Qz1Zz0J", "3q3m6j8z9Z0Z0Z0Z0Z0Z0Z"]}}
+        """
+        
+        # Get Gemini's response
+        response = model.generate_content(prompt)
+        response_text = response.text.strip()
         
         # Clean the response text
-        response_text = response.text.strip()
         if response_text.startswith('```json'):
             response_text = response_text[7:]
         if response_text.endswith('```'):
             response_text = response_text[:-3]
-        
         response_text = response_text.strip()
-        logging.info(f"Cleaned response text: {response_text}")
         
         # Parse JSON response
         parsed_response = json.loads(response_text)
+        logging.info(f"Parsed response: {parsed_response}")
         
-        # Validate the response format
-        required_keys = ['song', 'artist', 'playlist']
-        for key in required_keys:
-            if key not in parsed_response:
-                parsed_response[key] = None
-        
-        logging.info(f"Successfully parsed response: {parsed_response}")
         return parsed_response
         
-    except json.JSONDecodeError as e:
-        logging.error(f"JSON parsing error: {str(e)}")
-        logging.error(f"Response text that failed to parse: {response_text}")
-        return {"error": "Failed to parse Gemini response"}
-        
     except Exception as e:
-        logging.error(f"Unexpected error in process_user_input: {str(e)}")
-        return {"error": f"Unexpected error: {str(e)}"}
+        logging.error(f"Error in process_user_input: {str(e)}")
+        return {"error": str(e)}
 
 @app.route("/request-song", methods=["POST"])
-
 def request_song():
     logging.info("Received request to /request-song endpoint")
     
@@ -235,31 +208,24 @@ def request_song():
             logging.error(f"Error in processed input: {processed_input['error']}")
             return jsonify({"error": processed_input["error"]}), 500
             
-        if not processed_input.get("song") or not processed_input.get("artist"):
-            logging.error("Could not extract song and artist information")
-            return jsonify({"error": "Could not extract song and artist information"}), 400
-
-        # Fetch song ID
-        song_id = get_song_id(processed_input["song"], processed_input["artist"])
-        logging.info(f"Retrieved song ID: {song_id}")
+        # Download songs or playlist
+        if processed_input.get("songs"):
+            song_ids = processed_input["songs"]
+            for song_id in song_ids:
+                if download_song(song_id):
+                    logging.info(f"Successfully downloaded song: {song_id}")
+                else:
+                    logging.error(f"Failed to download song: {song_id}")
+            return jsonify({"success": True, "songs": song_ids})
         
-        if not song_id:
-            logging.error("Song not found")
-            return jsonify({"error": "Song not found!"}), 404
-
-        # Download song
-        if download_song(song_id):
-            logging.info("Successfully downloaded song")
-            # Generate DJ adlib
-            adlib = generate_dj_adlib(processed_input["song"], processed_input["artist"])
-            return jsonify({
-                "song_id": song_id,
-                "adlib": adlib,
-                "download_link": f"/play/{song_id}"
-            })
+        elif processed_input.get("playlist"):
+            playlist_id = processed_input["playlist"]
+            # Implement playlist download logic here
+            return jsonify({"success": True, "playlist": playlist_id})
+        
         else:
-            logging.error("Failed to download song")
-            return jsonify({"error": "Failed to download song!"}), 500
+            logging.error("No valid songs or playlist found in response")
+            return jsonify({"error": "No valid songs or playlist found!"}), 400
 
     except Exception as e:
         logging.error(f"Unexpected error in request_song: {str(e)}")
@@ -273,6 +239,7 @@ def play_song(song_id):
         return send_file(file_path, as_attachment=True)
     else:
         return jsonify({"error": "Song not found!"}), 404
+
 @app.route("/test-gemini", methods=["GET"])
 def test_gemini():
     try:
