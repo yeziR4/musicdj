@@ -163,21 +163,45 @@ def process_user_input(user_input):
         
         Your task is to:
         1. Understand the user's intent.
-        2. Generate the necessary Spotify API query or code to fulfill the request.
-        3. Return the song(s) or playlist details in the following format:
-           {{"songs": ["song_id_1", "song_id_2"], "playlist": "playlist_id"}}
+        2. Generate Python code to query the Spotify API and fetch the required song(s) or playlist.
+        3. Return the code in the following format:
+           ```python
+           # Python code to query Spotify API
+           results = sp.search(q="query", type="track", limit=1)
+           song_id = results["tracks"]["items"][0]["id"]
+           {{"songs": [song_id]}}
+           ```
         
         Example 1:
-        - User input: "Play Davido's latest song."
-        - Output: {{"songs": ["6tE4IXA8W8d6Fj5Qz1Zz0J"]}}
+        - User input: "Play Asake's latest song."
+        - Output:
+          ```python
+          results = sp.search(q="artist:Asake", type="track", limit=1)
+          song_id = results["tracks"]["items"][0]["id"]
+          {{"songs": [song_id]}}
+          ```
         
         Example 2:
         - User input: "Play my new playlist."
-        - Output: {{"playlist": "37i9dQZF1DXcBWIGoYBM5M"}}
+        - Output:
+          ```python
+          playlists = sp.current_user_playlists(limit=1)
+          playlist_id = playlists["items"][0]["id"]
+          {{"playlist": playlist_id}}
+          ```
         
         Example 3:
-        - User input: "Play a mix of Davido and Wizkid."
-        - Output: {{"songs": ["6tE4IXA8W8d6Fj5Qz1Zz0J", "3q3m6j8z9Z0Z0Z0Z0Z0Z0Z"]}}
+        - User input: "Play a mix of Asake and Burna Boy."
+        - Output:
+          ```python
+          results1 = sp.search(q="artist:Asake", type="track", limit=1)
+          results2 = sp.search(q="artist:Burna Boy", type="track", limit=1)
+          song_id1 = results1["tracks"]["items"][0]["id"]
+          song_id2 = results2["tracks"]["items"][0]["id"]
+          {{"songs": [song_id1, song_id2]}}
+          ```
+        
+        IMPORTANT: Only return the Python code. Do not include any explanations or additional text.
         """
         
         # Get Gemini's response
@@ -187,22 +211,24 @@ def process_user_input(user_input):
         # Log the raw response from Gemini
         logging.info(f"Raw response from Gemini: {response_text}")
         
-        # Attempt to fix the JSON
-        fixed_json = fix_json(response_text)
-        if not fixed_json:
-            logging.error("Failed to fix JSON response from Gemini")
-            return {"error": "Invalid JSON response from Gemini"}
+        # Extract the code block from the response
+        code_block = re.search(r'```python(.*?)```', response_text, re.DOTALL)
+        if not code_block:
+            logging.error("No code block found in Gemini's response")
+            return {"error": "No code block found in Gemini's response"}
         
-        # Parse JSON response
-        parsed_response = json.loads(fixed_json)
-        logging.info(f"Parsed response: {parsed_response}")
+        code = code_block.group(1).strip()
+        logging.info(f"Extracted code: {code}")
         
-        return parsed_response
+        # Execute the code
+        local_vars = {"sp": sp}
+        exec(code, {}, local_vars)
         
-    except json.JSONDecodeError as e:
-        logging.error(f"JSON parsing error: {str(e)}")
-        logging.error(f"Response text that failed to parse: {response_text}")
-        return {"error": "Failed to parse Gemini response"}
+        # Get the result from the executed code
+        result = local_vars.get("result", {})
+        logging.info(f"Executed code result: {result}")
+        
+        return result
         
     except Exception as e:
         logging.error(f"Unexpected error in process_user_input: {str(e)}")
