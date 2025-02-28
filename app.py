@@ -1,11 +1,10 @@
-from flask import Flask, jsonify, request, send_file, redirect, url_for, send_from_directory
+from flask import Flask, jsonify, request, redirect, url_for, send_from_directory
 import requests
 import os
 import json
-import http.client
 import google.generativeai as genai
 import spotipy
-from spotipy.oauth2 import SpotifyOAuth
+from spotipy.oauth2 import SpotifyOAuth, SpotifyClientCredentials
 import logging
 
 # Configure logging
@@ -35,31 +34,7 @@ logging.info(f"SPOTIFY_CLIENT_ID set: {bool(SPOTIFY_CLIENT_ID)}")
 logging.info(f"SPOTIFY_CLIENT_SECRET set: {bool(SPOTIFY_CLIENT_SECRET)}")
 logging.info(f"SPOTIFY_REDIRECT_URI set: {bool(SPOTIFY_REDIRECT_URI)}")
 
-# Initialize Spotify client
-try:
-    sp = spotipy.Spotify(auth_manager=SpotifyOAuth(
-        client_id=SPOTIFY_CLIENT_ID,
-        client_secret=SPOTIFY_CLIENT_SECRET,
-        redirect_uri=SPOTIFY_REDIRECT_URI,
-        scope="user-library-read"
-    ))
-    # Test Spotify connection
-    playlists = sp.current_user_playlists(limit=1)
-    logging.info("Successfully connected to Spotify API")
-except Exception as e:
-    logging.error(f"Failed to initialize Spotify client: {str(e)}")
-    # Don't raise the exception, let the app continue running
-
-# RapidAPI details
-RAPIDAPI_DOWNLOAD_URL = "https://spotify-downloader9.p.rapidapi.com/downloadSong"
-RAPIDAPI_HEADERS = {
-    'x-rapidapi-key': "ddcf2a8d79msh5fd641f22600767p1d343bjsna3c2e5ddcff1",
-    'x-rapidapi-host': "spotify-downloader9.p.rapidapi.com"
-}
-
-from spotipy.oauth2 import SpotifyClientCredentials
-
-# Initialize Spotify client with client credentials flow instead of OAuth
+# Initialize Spotify client with client credentials flow
 try:
     sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
         client_id=SPOTIFY_CLIENT_ID,
@@ -68,23 +43,6 @@ try:
     logging.info("Successfully initialized Spotify client with client credentials")
 except Exception as e:
     logging.error(f"Failed to initialize Spotify client: {str(e)}")
-
-
-def download_song(song_id):
-    """Download song using RapidAPI Spotify Downloader."""
-    conn = http.client.HTTPSConnection("spotify-downloader9.p.rapidapi.com")
-    conn.request("GET", f"/downloadSong?songId={song_id}", headers=RAPIDAPI_HEADERS)
-    res = conn.getresponse()
-    data = res.read()
-    response_json = json.loads(data.decode("utf-8"))
-    if response_json.get("success", False):
-        download_link = response_json["data"]["downloadLink"]
-        audio_response = requests.get(download_link)
-        if audio_response.status_code == 200:
-            with open(f"{song_id}.mp3", "wb") as f:
-                f.write(audio_response.content)
-            return True
-    return False
 
 def generate_dj_adlib(song_name, artist_name):
     """Generate DJ adlib using Gemini."""
@@ -97,7 +55,8 @@ def generate_dj_adlib(song_name, artist_name):
 @app.route("/auth/login", methods=["GET"])
 def auth_login():
     """Redirect user to Spotify login page."""
-    SCOPES = "playlist-read-private user-library-read"
+    # Updated scopes to include streaming capabilities
+    SCOPES = "playlist-read-private user-library-read streaming user-read-email user-read-private"
     login_url = (
         f"https://accounts.spotify.com/authorize"
         f"?client_id={SPOTIFY_CLIENT_ID}"
@@ -129,6 +88,8 @@ def callback():
         return jsonify({"error": "Failed to exchange token!"}), 400
 
     token_data = response.json()
+    
+    # Return tokens to the client for Web Playback SDK usage
     return redirect(
         url_for(
             "index",
@@ -139,18 +100,6 @@ def callback():
     )
 
 import re
-
-def fix_json(response_text):
-    """Attempt to fix malformed JSON."""
-    try:
-        # Remove any non-JSON characters (e.g., markdown code blocks)
-        response_text = re.sub(r'```json|```', '', response_text).strip()
-        # Parse the JSON to ensure it's valid
-        json.loads(response_text)
-        return response_text
-    except json.JSONDecodeError:
-        # If the JSON is still invalid, return None
-        return None
 
 def process_user_input(user_input):
     logging.info(f"Processing user input: {user_input}")
@@ -169,7 +118,14 @@ def process_user_input(user_input):
            # Python code to query Spotify API
            results = sp.search(q="query", type="track", limit=1)
            song_id = results["tracks"]["items"][0]["id"]
-           result = {{"songs": [song_id]}}
+           song_name = results["tracks"]["items"][0]["name"]
+           artist_name = results["tracks"]["items"][0]["artists"][0]["name"]
+           result = {{"songs": [{{
+               "id": song_id,
+               "name": song_name,
+               "artist": artist_name,
+               "uri": f"spotify:track:{{song_id}}"
+           }}]}}
            ```
         
         Example 1:
@@ -178,7 +134,14 @@ def process_user_input(user_input):
           ```python
           results = sp.search(q="artist:Asake", type="track", limit=1)
           song_id = results["tracks"]["items"][0]["id"]
-          result = {{"songs": [song_id]}}
+          song_name = results["tracks"]["items"][0]["name"]
+          artist_name = results["tracks"]["items"][0]["artists"][0]["name"]
+          result = {{"songs": [{{
+              "id": song_id,
+              "name": song_name,
+              "artist": artist_name,
+              "uri": f"spotify:track:{{song_id}}"
+          }}]}}
           ```
         
         Example 2:
@@ -187,7 +150,12 @@ def process_user_input(user_input):
           ```python
           playlists = sp.current_user_playlists(limit=1)
           playlist_id = playlists["items"][0]["id"]
-          result = {{"playlist": playlist_id}}
+          playlist_name = playlists["items"][0]["name"]
+          result = {{"playlist": {{
+              "id": playlist_id,
+              "name": playlist_name,
+              "uri": f"spotify:playlist:{{playlist_id}}"
+          }}}}
           ```
         
         Example 3:
@@ -197,13 +165,31 @@ def process_user_input(user_input):
           results1 = sp.search(q="artist:Asake", type="track", limit=1)
           results2 = sp.search(q="artist:Burna Boy", type="track", limit=1)
           song_id1 = results1["tracks"]["items"][0]["id"]
-          song_id2 = results2["tracks"]["items"][0]["id"]
-          result = {{"songs": [song_id1, song_id2]}}
+          song_name1 = results1["tracks"]["items"][0]["name"]
+          artist_name1 = results1["tracks"]["items"][0]["artists"][0]["name"]
+          song_id2 = results2["tracks"]["items"][0]["id"] 
+          song_name2 = results2["tracks"]["items"][0]["name"]
+          artist_name2 = results2["tracks"]["items"][0]["artists"][0]["name"]
+          result = {{"songs": [
+              {{
+                  "id": song_id1,
+                  "name": song_name1,
+                  "artist": artist_name1,
+                  "uri": f"spotify:track:{{song_id1}}"
+              }},
+              {{
+                  "id": song_id2,
+                  "name": song_name2,
+                  "artist": artist_name2,
+                  "uri": f"spotify:track:{{song_id2}}"
+              }}
+          ]}}
           ```
         
         IMPORTANT: 
         - Do not include the `sort` parameter in the `sp.search()` method.
         - Always assign the result to the variable `result`. 
+        - Include URIs and human-readable names for playback.
         - Do not include any explanations or additional text.
         """
         
@@ -260,24 +246,26 @@ def request_song():
             logging.error(f"Error in processed input: {processed_input['error']}")
             return jsonify({"error": processed_input["error"]}), 500
             
-        # Download songs or playlist
+        # Return track info for Web Playback SDK
         if processed_input.get("songs"):
-            song_ids = processed_input["songs"]
-            for song_id in song_ids:
-                if download_song(song_id):
-                    logging.info(f"Successfully downloaded song: {song_id}")
-                else:
-                    logging.error(f"Failed to download song: {song_id}")
+            songs = processed_input["songs"]
+            first_song = songs[0]
+            
+            # Generate adlib for the song
+            adlib = generate_dj_adlib(first_song["name"], first_song["artist"])
+            
             return jsonify({
-                "song_id": song_ids[0],  # Return the first song ID
-                "download_link": f"/play/{song_ids[0]}",  # Correct download link
-                "adlib": generate_dj_adlib(user_input, "Unknown Artist")  # Generate adlib
+                "type": "track",
+                "tracks": songs,
+                "adlib": adlib
             })
         
         elif processed_input.get("playlist"):
-            playlist_id = processed_input["playlist"]
-            # Implement playlist download logic here
-            return jsonify({"success": True, "playlist": playlist_id})
+            playlist = processed_input["playlist"]
+            return jsonify({
+                "type": "playlist",
+                "playlist": playlist
+            })
         
         else:
             logging.error("No valid songs or playlist found in response")
@@ -286,16 +274,28 @@ def request_song():
     except Exception as e:
         logging.error(f"Unexpected error in request_song: {str(e)}")
         return jsonify({"error": "An unexpected error occurred"}), 500
-@app.route("/play/<song_id>", methods=["GET"])
-def play_song(song_id):
-    """Serve the downloaded song."""
-    file_path = f"{song_id}.mp3"
-    logging.info(f"Serving file: {file_path}")
-    if os.path.exists(file_path):
-        return send_file(file_path, mimetype="audio/mpeg")
-    else:
-        logging.error(f"File not found: {file_path}")
-        return jsonify({"error": "Song not found!"}), 404
+
+@app.route("/refresh-token", methods=["POST"])
+def refresh_token():
+    """Refresh the Spotify access token."""
+    refresh_token = request.json.get("refresh_token")
+    if not refresh_token:
+        return jsonify({"error": "Refresh token is required!"}), 400
+
+    response = requests.post(
+        "https://accounts.spotify.com/api/token",
+        data={
+            "grant_type": "refresh_token",
+            "refresh_token": refresh_token,
+            "client_id": SPOTIFY_CLIENT_ID,
+            "client_secret": SPOTIFY_CLIENT_SECRET,
+        },
+    )
+
+    if response.status_code != 200:
+        return jsonify({"error": "Failed to refresh token!"}), 400
+
+    return jsonify(response.json())
 
 @app.route("/test-gemini", methods=["GET"])
 def test_gemini():
