@@ -111,86 +111,70 @@ def process_user_input(user_input):
         The user has made the following request: '{user_input}'
         
         Your task is to:
-        1. Understand the user's intent.
-        2. Generate Python code to query the Spotify API and fetch the required song(s) or playlist.
+        1. Understand the user's intent to find the newest/latest song.
+        2. Generate Python code to query the Spotify API and fetch the most recent track.
         3. Return the code in the following format:
            ```python
-           # Python code to query Spotify API
-           results = sp.search(q="query", type="track", limit=1)
-           song_id = results["tracks"]["items"][0]["id"]
-           song_name = results["tracks"]["items"][0]["name"]
-           artist_name = results["tracks"]["items"][0]["artists"][0]["name"]
-           result = {{"songs": [{{
-               "id": song_id,
-               "name": song_name,
-               "artist": artist_name,
-               "uri": f"spotify:track:{{song_id}}"
-           }}]}}
+           # Python code to query Spotify API, sorted by release date
+           results = sp.search(q="artist:ArtistName", type="track", limit=10)
+           # Sort tracks by release date, most recent first
+           sorted_tracks = sorted(
+               results["tracks"]["items"], 
+               key=lambda x: x.get('album', {}).get('release_date', ''), 
+               reverse=True
+           )
+           
+           # Check if sorted tracks exist
+           if not sorted_tracks:
+               result = {"error": "No matching tracks found"}
+           else:
+               newest_track = sorted_tracks[0]
+               song_id = newest_track["id"]
+               song_name = newest_track["name"]
+               artist_name = newest_track["artists"][0]["name"]
+               result = {{"songs": [{{
+                   "id": song_id,
+                   "name": song_name,
+                   "artist": artist_name,
+                   "uri": f"spotify:track:{{song_id}}"
+               }}]}}
            ```
         
+        Key instructions:
+        - Always search for multiple tracks and then sort
+        - Use the album's release date to determine the newest track
+        - If no release date is found, use the most popular/recent track
+        - Ensure the result is a single track with the most recent release
+        - Do not include technical explanations in the code
+        
         Example 1:
-        - User input: "Play Asake's latest song."
+        - User input: "Play Rema's latest song"
         - Output:
           ```python
-          results = sp.search(q="artist:Asake", type="track", limit=1)
-          song_id = results["tracks"]["items"][0]["id"]
-          song_name = results["tracks"]["items"][0]["name"]
-          artist_name = results["tracks"]["items"][0]["artists"][0]["name"]
-          result = {{"songs": [{{
-              "id": song_id,
-              "name": song_name,
-              "artist": artist_name,
-              "uri": f"spotify:track:{{song_id}}"
-          }}]}}
+          results = sp.search(q="artist:Rema", type="track", limit=10)
+          sorted_tracks = sorted(
+              results["tracks"]["items"], 
+              key=lambda x: x.get('album', {}).get('release_date', ''), 
+              reverse=True
+          )
+          if not sorted_tracks:
+              result = {"error": "No Rema tracks found"}
+          else:
+              newest_track = sorted_tracks[0]
+              song_id = newest_track["id"]
+              song_name = newest_track["name"]
+              artist_name = newest_track["artists"][0]["name"]
+              result = {{"songs": [{{
+                  "id": song_id,
+                  "name": song_name,
+                  "artist": artist_name,
+                  "uri": f"spotify:track:{{song_id}}"
+              }}]}}
           ```
         
         Example 2:
-        - User input: "Play my new playlist."
-        - Output:
-          ```python
-          playlists = sp.current_user_playlists(limit=1)
-          playlist_id = playlists["items"][0]["id"]
-          playlist_name = playlists["items"][0]["name"]
-          result = {{"playlist": {{
-              "id": playlist_id,
-              "name": playlist_name,
-              "uri": f"spotify:playlist:{{playlist_id}}"
-          }}}}
-          ```
-        
-        Example 3:
-        - User input: "Play a mix of Asake and Burna Boy."
-        - Output:
-          ```python
-          results1 = sp.search(q="artist:Asake", type="track", limit=1)
-          results2 = sp.search(q="artist:Burna Boy", type="track", limit=1)
-          song_id1 = results1["tracks"]["items"][0]["id"]
-          song_name1 = results1["tracks"]["items"][0]["name"]
-          artist_name1 = results1["tracks"]["items"][0]["artists"][0]["name"]
-          song_id2 = results2["tracks"]["items"][0]["id"] 
-          song_name2 = results2["tracks"]["items"][0]["name"]
-          artist_name2 = results2["tracks"]["items"][0]["artists"][0]["name"]
-          result = {{"songs": [
-              {{
-                  "id": song_id1,
-                  "name": song_name1,
-                  "artist": artist_name1,
-                  "uri": f"spotify:track:{{song_id1}}"
-              }},
-              {{
-                  "id": song_id2,
-                  "name": song_name2,
-                  "artist": artist_name2,
-                  "uri": f"spotify:track:{{song_id2}}"
-              }}
-          ]}}
-          ```
-        
-        IMPORTANT: 
-        - Do not include the `sort` parameter in the `sp.search()` method.
-        - Always assign the result to the variable `result`. 
-        - Include URIs and human-readable names for playback.
-        - Do not include any explanations or additional text.
+        - User input: "Play Wizkid's newest song"
+        - Output similar to Example 1, but with Wizkid as the artist
         """
         
         # Get Gemini's response
@@ -214,13 +198,17 @@ def process_user_input(user_input):
         
         # Execute the code and capture the result
         local_vars = {"sp": sp, "result": None}
-        exec(code, {}, local_vars)
-        
-        # Get the result from the executed code
-        result = local_vars.get("result", {})
-        logging.info(f"Executed code result: {result}")
-        
-        return result
+        try:
+            exec(code, {}, local_vars)
+            
+            # Get the result from the executed code
+            result = local_vars.get("result", {})
+            logging.info(f"Executed code result: {result}")
+            
+            return result
+        except Exception as exec_error:
+            logging.error(f"Error executing Gemini-generated code: {str(exec_error)}")
+            return {"error": f"Error in search query: {str(exec_error)}"}
         
     except Exception as e:
         logging.error(f"Unexpected error in process_user_input: {str(e)}")
