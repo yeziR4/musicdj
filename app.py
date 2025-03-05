@@ -100,7 +100,6 @@ def callback():
     )
 
 import re
-
 def process_user_input(user_input):
     logging.info(f"Processing user input: {user_input}")
     
@@ -132,12 +131,12 @@ def process_user_input(user_input):
                song_id = newest_track["id"]
                song_name = newest_track["name"]
                artist_name = newest_track["artists"][0]["name"]
-               result = {{"songs": [{{
+               result = {"songs": [{
                    "id": song_id,
                    "name": song_name,
                    "artist": artist_name,
-                   "uri": f"spotify:track:{{song_id}}"
-               }}]}}
+                   "uri": f"spotify:track:{song_id}"
+               }]}
            ```
         
         Key instructions:
@@ -149,32 +148,11 @@ def process_user_input(user_input):
         
         Example 1:
         - User input: "Play Rema's latest song"
-        - Output:
-          ```python
-          results = sp.search(q="artist:Rema", type="track", limit=10)
-          sorted_tracks = sorted(
-              results["tracks"]["items"], 
-              key=lambda x: x.get('album', {}).get('release_date', ''), 
-              reverse=True
-          )
-          if not sorted_tracks:
-              result = {"error": "No Rema tracks found"}
-          else:
-              newest_track = sorted_tracks[0]
-              song_id = newest_track["id"]
-              song_name = newest_track["name"]
-              artist_name = newest_track["artists"][0]["name"]
-              result = {{"songs": [{{
-                  "id": song_id,
-                  "name": song_name,
-                  "artist": artist_name,
-                  "uri": f"spotify:track:{{song_id}}"
-              }}]}}
-          ```
+        - Output: <PYTHON CODE BLOCK SIMILAR TO ABOVE>
         
         Example 2:
         - User input: "Play Wizkid's newest song"
-        - Output similar to Example 1, but with Wizkid as the artist
+        - Output: <PYTHON CODE BLOCK SIMILAR TO ABOVE>
         """
         
         # Get Gemini's response
@@ -213,6 +191,7 @@ def process_user_input(user_input):
     except Exception as e:
         logging.error(f"Unexpected error in process_user_input: {str(e)}")
         return {"error": f"Unexpected error: {str(e)}"}
+
 
 @app.route("/request-song", methods=["POST"])
 def request_song():
