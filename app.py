@@ -101,13 +101,13 @@ def callback():
 
 import re
 def process_user_input(user_input):
-    logging.info(f"Processing user input: {user_input}")
+    logging.info("Processing user input: {}".format(user_input))
     
     try:
-        # Create the prompt
-        prompt = f"""
+        # Simplified prompt without complex f-string
+        prompt = """
         You are a music assistant integrated with the Spotify API. 
-        The user has made the following request: '{user_input}'
+        The user has made the following request: '{}'
         
         Your task is to:
         1. Understand the user's intent to find the newest/latest song.
@@ -135,7 +135,7 @@ def process_user_input(user_input):
                    "id": song_id,
                    "name": song_name,
                    "artist": artist_name,
-                   "uri": f"spotify:track:{song_id}"
+                   "uri": "spotify:track:" + song_id
                }]}
            ```
         
@@ -145,22 +145,14 @@ def process_user_input(user_input):
         - If no release date is found, use the most popular/recent track
         - Ensure the result is a single track with the most recent release
         - Do not include technical explanations in the code
-        
-        Example 1:
-        - User input: "Play Rema's latest song"
-        - Output: <PYTHON CODE BLOCK SIMILAR TO ABOVE>
-        
-        Example 2:
-        - User input: "Play Wizkid's newest song"
-        - Output: <PYTHON CODE BLOCK SIMILAR TO ABOVE>
-        """
+        """.format(user_input)
         
         # Get Gemini's response
         response = model.generate_content(prompt)
         response_text = response.text.strip()
         
         # Log the raw response from Gemini
-        logging.info(f"Raw response from Gemini: {response_text}")
+        logging.info("Raw response from Gemini: {}".format(response_text))
         
         # Extract the code block from the response
         code_block = re.search(r'```python(.*?)```', response_text, re.DOTALL)
@@ -172,7 +164,7 @@ def process_user_input(user_input):
         
         # Remove the `sort` parameter if it exists
         code = re.sub(r',\s*sort="[^"]*"', '', code)
-        logging.info(f"Extracted code (after removing sort): {code}")
+        logging.info("Extracted code (after removing sort): {}".format(code))
         
         # Execute the code and capture the result
         local_vars = {"sp": sp, "result": None}
@@ -181,16 +173,16 @@ def process_user_input(user_input):
             
             # Get the result from the executed code
             result = local_vars.get("result", {})
-            logging.info(f"Executed code result: {result}")
+            logging.info("Executed code result: {}".format(result))
             
             return result
         except Exception as exec_error:
-            logging.error(f"Error executing Gemini-generated code: {str(exec_error)}")
-            return {"error": f"Error in search query: {str(exec_error)}"}
+            logging.error("Error executing Gemini-generated code: {}".format(str(exec_error)))
+            return {"error": "Error in search query: {}".format(str(exec_error))}
         
     except Exception as e:
-        logging.error(f"Unexpected error in process_user_input: {str(e)}")
-        return {"error": f"Unexpected error: {str(e)}"}
+        logging.error("Unexpected error in process_user_input: {}".format(str(e)))
+        return {"error": "Unexpected error: {}".format(str(e))}
 
 
 @app.route("/request-song", methods=["POST"])
