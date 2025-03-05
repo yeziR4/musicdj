@@ -104,10 +104,13 @@ def process_user_input(user_input):
     try:
         logging.info("Processing user input: {}".format(user_input))
         
+        # Extract artist name (assuming the second word is the artist)
+        artist_name = user_input.split()[1] if len(user_input.split()) > 1 else ""
+        
         # Simplified prompt 
         prompt = """
         You are a music assistant integrated with the Spotify API. 
-        The user has made the following request: '{}}'
+        The user has made the following request: '{}'
         
         Your task is to:
         1. Understand the user's intent to find the newest/latest song.
@@ -145,7 +148,7 @@ def process_user_input(user_input):
         - If no release date is found, use the most popular/recent track
         - Ensure the result is a single track with the most recent release
         - Do not include technical explanations in the code
-        """.format(user_input, user_input.split()[1] if len(user_input.split()) > 1 else "")
+        """.format(user_input, artist_name)
         
         # Get Gemini's response
         response = model.generate_content(prompt)
@@ -185,6 +188,12 @@ def process_user_input(user_input):
         error_message = str(e)
         logging.error("Unexpected error in process_user_input: {}".format(error_message))
         return {"error": "Unexpected error: {}".format(error_message)}
+
+            
+      
+        
+      
+      
 
          
 
