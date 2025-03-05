@@ -101,63 +101,90 @@ def callback():
 
 import re
 def process_user_input(user_input):
+    logging.info(f"Processing user input: {user_input}")
+    
     try:
-        logging.info("Processing user input: {}".format(user_input))
-        
-        # Extract artist name (handling more complex input)
-        input_parts = user_input.split()
-        artist_name = input_parts[1] if len(input_parts) > 1 else ""
-        
-        # Simplified prompt 
-        prompt = """
+        # Create the prompt
+        prompt = f"""
         You are a music assistant integrated with the Spotify API. 
-        The user request is: '{0}'
+        The user has made the following request: '{user_input}'
         
-        Identify the artist: '{1}'
-        
-        Task:
-        1. Find the newest song for this artist
-        2. Generate Python code to query the Spotify API
-        3. Return code in this format:
+        Your task is to:
+        1. Understand the user's intent to find the newest/latest song.
+        2. Generate Python code to query the Spotify API and fetch the most recent track.
+        3. Return the code in the following format:
            ```python
-           # Query Spotify API for most recent track
-           results = sp.search(q="artist:{1}", type="track", limit=10)
-           
-           # Sort tracks by release date
+           # Python code to query Spotify API, sorted by release date
+           results = sp.search(q="artist:ArtistName", type="track", limit=10)
+           # Sort tracks by release date, most recent first
            sorted_tracks = sorted(
                results["tracks"]["items"], 
                key=lambda x: x.get('album', {}).get('release_date', ''), 
                reverse=True
            )
            
-           # Process results
+           # Check if sorted tracks exist
            if not sorted_tracks:
-               result = {"error": "No tracks found"}
+               result = {"error": "No matching tracks found"}
            else:
                newest_track = sorted_tracks[0]
                song_id = newest_track["id"]
                song_name = newest_track["name"]
                artist_name = newest_track["artists"][0]["name"]
-               result = {"songs": [{
+               spotify_uri = "spotify:track:" + song_id
+               result = {{"songs": [{{
                    "id": song_id,
                    "name": song_name,
                    "artist": artist_name,
-                   "uri": "spotify:track:" + song_id
-               }]}
+                   "uri": spotify_uri
+               }}]}}
            ```
         
-        Instructions:
-        - Sort tracks by release date
-        - Return most recent track
-        - Ensure robust error handling
-        """.format(user_input, artist_name)
+        Key instructions:
+        - Always search for multiple tracks and then sort
+        - Use the album's release date to determine the newest track
+        - If no release date is found, use the most popular/recent track
+        - Ensure the result is a single track with the most recent release
+        - Do not include technical explanations in the code
+        - Use string concatenation instead of f-strings for URI creation
+        
+        Example 1:
+        - User input: "Play Rema's latest song"
+        - Output:
+          ```python
+          results = sp.search(q="artist:Rema", type="track", limit=10)
+          sorted_tracks = sorted(
+              results["tracks"]["items"], 
+              key=lambda x: x.get('album', {}).get('release_date', ''), 
+              reverse=True
+          )
+          if not sorted_tracks:
+              result = {"error": "No Rema tracks found"}
+          else:
+              newest_track = sorted_tracks[0]
+              song_id = newest_track["id"]
+              song_name = newest_track["name"]
+              artist_name = newest_track["artists"][0]["name"]
+              spotify_uri = "spotify:track:" + song_id
+              result = {{"songs": [{{
+                  "id": song_id,
+                  "name": song_name,
+                  "artist": artist_name,
+                  "uri": spotify_uri
+              }}]}}
+          ```
+        
+        Example 2:
+        - User input: "Play Wizkid's newest song"
+        - Output similar to Example 1, but with Wizkid as the artist
+        """
         
         # Get Gemini's response
         response = model.generate_content(prompt)
         response_text = response.text.strip()
         
         # Log the raw response from Gemini
-        logging.info("Raw response from Gemini: {}".format(response_text))
+        logging.info(f"Raw response from Gemini: {response_text}")
         
         # Extract the code block from the response
         code_block = re.search(r'```python(.*?)```', response_text, re.DOTALL)
@@ -169,7 +196,7 @@ def process_user_input(user_input):
         
         # Remove the `sort` parameter if it exists
         code = re.sub(r',\s*sort="[^"]*"', '', code)
-        logging.info("Extracted code (after removing sort): {}".format(code))
+        logging.info(f"Extracted code (after removing sort): {code}")
         
         # Execute the code and capture the result
         local_vars = {"sp": sp, "result": None}
@@ -178,26 +205,16 @@ def process_user_input(user_input):
             
             # Get the result from the executed code
             result = local_vars.get("result", {})
-            logging.info("Executed code result: {}".format(result))
+            logging.info(f"Executed code result: {result}")
             
             return result
         except Exception as exec_error:
-            logging.error("Error executing Gemini-generated code: {}".format(str(exec_error)))
-            return {"error": "Error in search query: {}".format(str(exec_error))}
+            logging.error(f"Error executing Gemini-generated code: {str(exec_error)}")
+            return {"error": f"Error in search query: {str(exec_error)}"}
         
     except Exception as e:
-        # Explicitly convert to string to avoid formatting issues
-        error_message = str(e)
-        logging.error("Unexpected error in process_user_input: {}".format(error_message))
-        return {"error": "Unexpected error: {}".format(error_message)}
-
-            
-      
-        
-      
-      
-
-         
+        logging.error(f"Unexpected error in process_user_input: {str(e)}")
+        return {"error": f"Unexpected error: {str(e)}"}
 
 
 @app.route("/request-song", methods=["POST"])
