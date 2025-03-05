@@ -101,13 +101,13 @@ def callback():
 
 import re
 def process_user_input(user_input):
-    logging.info("Processing user input: {}".format(user_input))
-    
     try:
-        # Simplified prompt without complex f-string
+        logging.info("Processing user input: {}".format(user_input))
+        
+        # Simplified prompt 
         prompt = """
         You are a music assistant integrated with the Spotify API. 
-        The user has made the following request: '{}'
+        The user has made the following request: '{}}'
         
         Your task is to:
         1. Understand the user's intent to find the newest/latest song.
@@ -115,7 +115,7 @@ def process_user_input(user_input):
         3. Return the code in the following format:
            ```python
            # Python code to query Spotify API, sorted by release date
-           results = sp.search(q="artist:ArtistName", type="track", limit=10)
+           results = sp.search(q="artist:{}", type="track", limit=10)
            # Sort tracks by release date, most recent first
            sorted_tracks = sorted(
                results["tracks"]["items"], 
@@ -145,7 +145,7 @@ def process_user_input(user_input):
         - If no release date is found, use the most popular/recent track
         - Ensure the result is a single track with the most recent release
         - Do not include technical explanations in the code
-        """.format(user_input)
+        """.format(user_input, user_input.split()[1] if len(user_input.split()) > 1 else "")
         
         # Get Gemini's response
         response = model.generate_content(prompt)
@@ -181,8 +181,12 @@ def process_user_input(user_input):
             return {"error": "Error in search query: {}".format(str(exec_error))}
         
     except Exception as e:
-        logging.error("Unexpected error in process_user_input: {}".format(str(e)))
-        return {"error": "Unexpected error: {}".format(str(e))}
+        # Explicitly convert to string to avoid formatting issues
+        error_message = str(e)
+        logging.error("Unexpected error in process_user_input: {}".format(error_message))
+        return {"error": "Unexpected error: {}".format(error_message)}
+
+         
 
 
 @app.route("/request-song", methods=["POST"])
