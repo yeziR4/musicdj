@@ -104,31 +104,35 @@ def process_user_input(user_input):
     try:
         logging.info("Processing user input: {}".format(user_input))
         
-        # Extract artist name (assuming the second word is the artist)
-        artist_name = user_input.split()[1] if len(user_input.split()) > 1 else ""
+        # Extract artist name (handling more complex input)
+        input_parts = user_input.split()
+        artist_name = input_parts[1] if len(input_parts) > 1 else ""
         
         # Simplified prompt 
         prompt = """
         You are a music assistant integrated with the Spotify API. 
-        The user has made the following request: '{}'
+        The user request is: '{0}'
         
-        Your task is to:
-        1. Understand the user's intent to find the newest/latest song.
-        2. Generate Python code to query the Spotify API and fetch the most recent track.
-        3. Return the code in the following format:
+        Identify the artist: '{1}'
+        
+        Task:
+        1. Find the newest song for this artist
+        2. Generate Python code to query the Spotify API
+        3. Return code in this format:
            ```python
-           # Python code to query Spotify API, sorted by release date
-           results = sp.search(q="artist:{}", type="track", limit=10)
-           # Sort tracks by release date, most recent first
+           # Query Spotify API for most recent track
+           results = sp.search(q="artist:{1}", type="track", limit=10)
+           
+           # Sort tracks by release date
            sorted_tracks = sorted(
                results["tracks"]["items"], 
                key=lambda x: x.get('album', {}).get('release_date', ''), 
                reverse=True
            )
            
-           # Check if sorted tracks exist
+           # Process results
            if not sorted_tracks:
-               result = {"error": "No matching tracks found"}
+               result = {"error": "No tracks found"}
            else:
                newest_track = sorted_tracks[0]
                song_id = newest_track["id"]
@@ -142,12 +146,10 @@ def process_user_input(user_input):
                }]}
            ```
         
-        Key instructions:
-        - Always search for multiple tracks and then sort
-        - Use the album's release date to determine the newest track
-        - If no release date is found, use the most popular/recent track
-        - Ensure the result is a single track with the most recent release
-        - Do not include technical explanations in the code
+        Instructions:
+        - Sort tracks by release date
+        - Return most recent track
+        - Ensure robust error handling
         """.format(user_input, artist_name)
         
         # Get Gemini's response
