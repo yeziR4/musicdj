@@ -117,19 +117,15 @@ def process_user_input(user_input):
            ```python
            # Python code to query Spotify API
            results = sp.search(q="query", type="track", limit=1)
-           # Check if results are empty
-           if not results["tracks"]["items"]:
-               result = {"error": "No matching tracks found"}
-           else:
-               song_id = results["tracks"]["items"][0]["id"]
-               song_name = results["tracks"]["items"][0]["name"]
-               artist_name = results["tracks"]["items"][0]["artists"][0]["name"]
-               result = {{"songs": [{{
-                   "id": song_id,
-                   "name": song_name,
-                   "artist": artist_name,
-                   "uri": f"spotify:track:{{song_id}}"
-               }}]}}
+           song_id = results["tracks"]["items"][0]["id"]
+           song_name = results["tracks"]["items"][0]["name"]
+           artist_name = results["tracks"]["items"][0]["artists"][0]["name"]
+           result = {{"songs": [{{
+               "id": song_id,
+               "name": song_name,
+               "artist": artist_name,
+               "uri": f"spotify:track:{{song_id}}"
+           }}]}}
            ```
         
         Example 1:
@@ -137,18 +133,15 @@ def process_user_input(user_input):
         - Output:
           ```python
           results = sp.search(q="artist:Asake", type="track", limit=1)
-          if not results["tracks"]["items"]:
-              result = {"error": "No matching tracks found"}
-          else:
-              song_id = results["tracks"]["items"][0]["id"]
-              song_name = results["tracks"]["items"][0]["name"]
-              artist_name = results["tracks"]["items"][0]["artists"][0]["name"]
-              result = {{"songs": [{{
-                  "id": song_id,
-                  "name": song_name,
-                  "artist": artist_name,
-                  "uri": f"spotify:track:{{song_id}}"
-              }}]}}
+          song_id = results["tracks"]["items"][0]["id"]
+          song_name = results["tracks"]["items"][0]["name"]
+          artist_name = results["tracks"]["items"][0]["artists"][0]["name"]
+          result = {{"songs": [{{
+              "id": song_id,
+              "name": song_name,
+              "artist": artist_name,
+              "uri": f"spotify:track:{{song_id}}"
+          }}]}}
           ```
         
         Example 2:
@@ -156,16 +149,13 @@ def process_user_input(user_input):
         - Output:
           ```python
           playlists = sp.current_user_playlists(limit=1)
-          if not playlists["items"]:
-              result = {"error": "No playlists found"}
-          else:
-              playlist_id = playlists["items"][0]["id"]
-              playlist_name = playlists["items"][0]["name"]
-              result = {{"playlist": {{
-                  "id": playlist_id,
-                  "name": playlist_name,
-                  "uri": f"spotify:playlist:{{playlist_id}}"
-              }}}}
+          playlist_id = playlists["items"][0]["id"]
+          playlist_name = playlists["items"][0]["name"]
+          result = {{"playlist": {{
+              "id": playlist_id,
+              "name": playlist_name,
+              "uri": f"spotify:playlist:{{playlist_id}}"
+          }}}}
           ```
         
         Example 3:
@@ -174,34 +164,29 @@ def process_user_input(user_input):
           ```python
           results1 = sp.search(q="artist:Asake", type="track", limit=1)
           results2 = sp.search(q="artist:Burna Boy", type="track", limit=1)
-          
-          if not results1["tracks"]["items"] or not results2["tracks"]["items"]:
-              result = {"error": "Could not find tracks for one or both artists"}
-          else:
-              song_id1 = results1["tracks"]["items"][0]["id"]
-              song_name1 = results1["tracks"]["items"][0]["name"]
-              artist_name1 = results1["tracks"]["items"][0]["artists"][0]["name"]
-              song_id2 = results2["tracks"]["items"][0]["id"] 
-              song_name2 = results2["tracks"]["items"][0]["name"]
-              artist_name2 = results2["tracks"]["items"][0]["artists"][0]["name"]
-              result = {{"songs": [
-                  {{
-                      "id": song_id1,
-                      "name": song_name1,
-                      "artist": artist_name1,
-                      "uri": f"spotify:track:{{song_id1}}"
-                  }},
-                  {{
-                      "id": song_id2,
-                      "name": song_name2,
-                      "artist": artist_name2,
-                      "uri": f"spotify:track:{{song_id2}}"
-                  }}
-              ]}}
+          song_id1 = results1["tracks"]["items"][0]["id"]
+          song_name1 = results1["tracks"]["items"][0]["name"]
+          artist_name1 = results1["tracks"]["items"][0]["artists"][0]["name"]
+          song_id2 = results2["tracks"]["items"][0]["id"] 
+          song_name2 = results2["tracks"]["items"][0]["name"]
+          artist_name2 = results2["tracks"]["items"][0]["artists"][0]["name"]
+          result = {{"songs": [
+              {{
+                  "id": song_id1,
+                  "name": song_name1,
+                  "artist": artist_name1,
+                  "uri": f"spotify:track:{{song_id1}}"
+              }},
+              {{
+                  "id": song_id2,
+                  "name": song_name2,
+                  "artist": artist_name2,
+                  "uri": f"spotify:track:{{song_id2}}"
+              }}
+          ]}}
           ```
         
         IMPORTANT: 
-        - Always check if search results are empty before accessing items
         - Do not include the `sort` parameter in the `sp.search()` method.
         - Always assign the result to the variable `result`. 
         - Include URIs and human-readable names for playback.
@@ -229,21 +214,18 @@ def process_user_input(user_input):
         
         # Execute the code and capture the result
         local_vars = {"sp": sp, "result": None}
-        try:
-            exec(code, {}, local_vars)
-            
-            # Get the result from the executed code
-            result = local_vars.get("result", {})
-            logging.info(f"Executed code result: {result}")
-            
-            return result
-        except Exception as exec_error:
-            logging.error(f"Error executing Gemini-generated code: {str(exec_error)}")
-            return {"error": f"Error in search query: {str(exec_error)}"}
+        exec(code, {}, local_vars)
+        
+        # Get the result from the executed code
+        result = local_vars.get("result", {})
+        logging.info(f"Executed code result: {result}")
+        
+        return result
         
     except Exception as e:
         logging.error(f"Unexpected error in process_user_input: {str(e)}")
         return {"error": f"Unexpected error: {str(e)}"}
+
 @app.route("/request-song", methods=["POST"])
 def request_song():
     logging.info("Received request to /request-song endpoint")
@@ -261,20 +243,8 @@ def request_song():
         logging.info(f"Processed input result: {processed_input}")
         
         if "error" in processed_input:
-            error_message = processed_input["error"]
-            logging.error(f"Error in processed input: {error_message}")
-            
-            # Provide a user-friendly message
-            if "No matching tracks found" in error_message or "Could not find tracks" in error_message:
-                return jsonify({
-                    "error": "I couldn't find that song or artist on Spotify. Please try a different search."
-                }), 404
-            elif "list index out of range" in error_message:
-                return jsonify({
-                    "error": "No results found for your query. Please try a more specific request."
-                }), 404
-            else:
-                return jsonify({"error": error_message}), 500
+            logging.error(f"Error in processed input: {processed_input['error']}")
+            return jsonify({"error": processed_input["error"]}), 500
             
         # Return track info for Web Playback SDK
         if processed_input.get("songs"):
@@ -282,11 +252,7 @@ def request_song():
             first_song = songs[0]
             
             # Generate adlib for the song
-            try:
-                adlib = generate_dj_adlib(first_song["name"], first_song["artist"])
-            except Exception as e:
-                logging.error(f"Failed to generate adlib: {str(e)}")
-                adlib = f"Now playing {first_song['name']} by {first_song['artist']}!"
+            adlib = generate_dj_adlib(first_song["name"], first_song["artist"])
             
             return jsonify({
                 "type": "track",
@@ -303,15 +269,12 @@ def request_song():
         
         else:
             logging.error("No valid songs or playlist found in response")
-            return jsonify({
-                "error": "I couldn't process that request. Please try asking in a different way."
-            }), 400
+            return jsonify({"error": "No valid songs or playlist found!"}), 400
 
     except Exception as e:
         logging.error(f"Unexpected error in request_song: {str(e)}")
-        return jsonify({
-            "error": "Something went wrong. Please try again."
-        }), 500
+        return jsonify({"error": "An unexpected error occurred"}), 500
+
 @app.route("/refresh-token", methods=["POST"])
 def refresh_token():
     """Refresh the Spotify access token."""
