@@ -105,7 +105,7 @@ def process_user_input(user_input):
     logging.info(f"Processing user input: {user_input}")
     
     try:
-        # Create the prompt without f-strings
+        # Create the prompt without any placeholders
         prompt = """
         You are a music assistant integrated with the Spotify API. 
         The user has made the following request: '{user_input}'
@@ -175,7 +175,7 @@ def process_user_input(user_input):
         Example 2:
         - User input: "Play Wizkid's newest song"
         - Output similar to Example 1, but with Wizkid as the artist
-        """.format(user_input=user_input)  # Interpolate user_input here
+        """.format(user_input=user_input)  # Only replace {user_input}
         
         # Get Gemini's response
         response = model.generate_content(prompt)
