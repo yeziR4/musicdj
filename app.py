@@ -105,8 +105,8 @@ def process_user_input(user_input):
     logging.info(f"Processing user input: {user_input}")
     
     try:
-        # Create the prompt
-        prompt = f"""
+        # Create the prompt without f-strings
+        prompt = """
         You are a music assistant integrated with the Spotify API. 
         The user has made the following request: '{user_input}'
         
@@ -132,12 +132,12 @@ def process_user_input(user_input):
                song_id = newest_track["id"]
                song_name = newest_track["name"]
                artist_name = newest_track["artists"][0]["name"]
-               result = {{"songs": [{{
+               result = {"songs": [{
                    "id": song_id,
                    "name": song_name,
                    "artist": artist_name,
-                   "uri": f"spotify:track:{song_id}"
-               }}]}}
+                   "uri": "spotify:track:" + song_id
+               }]}
            ```
         
         Key instructions:
@@ -164,18 +164,18 @@ def process_user_input(user_input):
               song_id = newest_track["id"]
               song_name = newest_track["name"]
               artist_name = newest_track["artists"][0]["name"]
-              result = {{"songs": [{{
+              result = {"songs": [{
                   "id": song_id,
                   "name": song_name,
                   "artist": artist_name,
-                  "uri": f"spotify:track:{song_id}"
-              }}]}}
+                  "uri": "spotify:track:" + song_id
+              }]}
           ```
         
         Example 2:
         - User input: "Play Wizkid's newest song"
         - Output similar to Example 1, but with Wizkid as the artist
-        """
+        """.format(user_input=user_input)  # Interpolate user_input here
         
         # Get Gemini's response
         response = model.generate_content(prompt)
