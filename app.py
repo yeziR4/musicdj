@@ -105,7 +105,7 @@ def process_user_input(user_input):
     logging.info(f"Processing user input: {user_input}")
     
     try:
-        # Create the prompt without any placeholders
+        # Create the prompt without any numeric placeholders
         prompt = """
         You are a music assistant integrated with the Spotify API. 
         The user has made the following request: '{user_input}'
