@@ -1,0 +1,161 @@
+{
+  "presidents": [
+    {
+      "country": "Chile",
+      "leaders": [
+        {
+          "name": "Augusto Pinochet",
+          "age_start": "57y 290d",
+          "age_end": "74y 106d",
+          "term_days": "N/A",
+          "lifespan": "91y 15d"
+        },
+        {
+          "name": "Patricio Aylwin",
+          "age_start": "71y 105d",
+          "age_end": "75y 105d",
+          "term_days": "N/A",
+          "lifespan": "97y 145d"
+        },
+        {
+          "name": "Eduardo Frei Ruiz-Tagle",
+          "age_start": "51y 260d",
+          "age_end": "57y 261d",
+          "term_days": "N/A",
+          "lifespan": "83y 190d"
+        },
+        {
+          "name": "Ricardo Lagos",
+          "age_start": "62y 9d",
+          "age_end": "68y 9d",
+          "term_days": "N/A",
+          "lifespan": "87y 304d"
+        },
+        {
+          "name": "Michelle Bachelet (1st)",
+          "age_start": "54y 163d",
+          "age_end": "58y 163d",
+          "term_days": "N/A",
+          "lifespan": "74y 93d"
+        },
+        {
+          "name": "Sebasti\u00e1n Pi\u00f1era (1st)",
+          "age_start": "60y 100d",
+          "age_end": "64y 100d",
+          "term_days": "N/A",
+          "lifespan": "74y 67d"
+        },
+        {
+          "name": "Michelle Bachelet (2nd)",
+          "age_start": "62y 163d",
+          "age_end": "66y 163d",
+          "term_days": "N/A",
+          "lifespan": "74y 93d"
+        },
+        {
+          "name": "Sebasti\u00e1n Pi\u00f1era (2nd)",
+          "age_start": "68y 100d",
+          "age_end": "72y 100d",
+          "term_days": "N/A",
+          "lifespan": "74y 67d"
+        }
+      ]
+    },
+    {
+      "country": "South Korea",
+      "leaders": [
+        {
+          "name": "Rhee Syng-man",
+          "age_start": "73y 120d",
+          "age_end": "85y 31d",
+          "term_days": "N/A",
+          "lifespan": "90y 115d"
+        },
+        {
+          "name": "Yun Po-sun",
+          "age_start": "62y 353d",
+          "age_end": "64y 210d",
+          "term_days": "N/A",
+          "lifespan": "92y 326d"
+        },
+        {
+          "name": "Park Chung Hee",
+          "age_start": "44y 130d",
+          "age_end": "61y 346d",
+          "term_days": "N/A",
+          "lifespan": "61y 346d"
+        },
+        {
+          "name": "Choi Kyu-hah",
+          "age_start": "60y 102d",
+          "age_end": "61y 31d",
+          "term_days": "N/A",
+          "lifespan": "87y 98d"
+        },
+        {
+          "name": "Chun Doo-hwan",
+          "age_start": "49y 227d",
+          "age_end": "57y 37d",
+          "term_days": "N/A",
+          "lifespan": "90y 309d"
+        },
+        {
+          "name": "Roh Tae-woo",
+          "age_start": "55y 83d",
+          "age_end": "60y 82d",
+          "term_days": "N/A",
+          "lifespan": "88y 326d"
+        },
+        {
+          "name": "Kim Young-sam",
+          "age_start": "65y 67d",
+          "age_end": "70y 66d",
+          "term_days": "N/A",
+          "lifespan": "87y 337d"
+        },
+        {
+          "name": "Kim Dae-jung",
+          "age_start": "74y 50d",
+          "age_end": "79y 49d",
+          "term_days": "N/A",
+          "lifespan": "85y 224d"
+        },
+        {
+          "name": "Roh Moo-hyun",
+          "age_start": "56y 177d",
+          "age_end": "61y 176d",
+          "term_days": "N/A",
+          "lifespan": "62y 264d"
+        },
+        {
+          "name": "Lee Myung-bak",
+          "age_start": "66y 68d",
+          "age_end": "71y 67d",
+          "term_days": "N/A",
+          "lifespan": "84y 11d"
+        },
+        {
+          "name": "Park Geun-hye",
+          "age_start": "61y 23d",
+          "age_end": "65y 36d",
+          "term_days": "N/A",
+          "lifespan": "73y 331d"
+        },
+        {
+          "name": "Moon Jae-in",
+          "age_start": "64y 106d",
+          "age_end": "69y 105d",
+          "term_days": "N/A",
+          "lifespan": "72y 340d"
+        },
+        {
+          "name": "Yoon Suk Yeol",
+          "age_start": "61y 143d",
+          "age_end": "64y 107d",
+          "term_days": "N/A",
+          "lifespan": "65y 12d"
+        }
+      ]
+    }
+  ]
+}
